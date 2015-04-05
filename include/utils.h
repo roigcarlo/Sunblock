@@ -1,3 +1,6 @@
+// Memory allocation & de-allocation
+#include "defines.h"
+
 template <typename T>
 void AllocateGrid(T ** grid,
     const uint &X, const uint &Y, const uint &Z) {
@@ -37,4 +40,39 @@ void ReleaseGrid(T * grid, const uint &align) {
 #else
   free(*grid);
 #endif
+}
+
+// Index calculation
+
+/** 
+ * Calculates the standard index
+ * @BW: BorderWidth
+ **/
+uint CalculateIndex(
+    const uint &BW,
+    const uint &i, const uint &j, const uint &k,
+    const uint &X, const uint &Y, const uint &Z) {
+  return k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
+}
+
+/** 
+ * Calculates the morton index
+ * @BW: BorderWidth
+ **/
+uint CalculateMortonIndex(
+    const uint &i, const uint &j, const uint &k,
+    const uint &X, const uint &Y, const uint &Z) {
+  // To be implemented
+  return 0;
+} 
+
+/** 
+ * Calculates the Peano index
+ * @BW: BorderWidth
+ **/
+uint CalculatePeanoIndex(
+    const uint &i, const uint &j, const uint &k,
+    const uint &X, const uint &Y, const uint &Z) {
+  // To be implemented
+  return 0;
 }
