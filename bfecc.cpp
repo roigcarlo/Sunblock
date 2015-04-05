@@ -252,7 +252,7 @@ void difussion(T * &gridA, T * &gridB,
 template <typename T, typename U>
 void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * fieldB,
     const uint &X, const uint &Y, const uint &Z) {
-  
+
   // Backward
   for(uint kk = 0; kk < NB; kk++)
     for(uint jj = 0; jj < NB; jj++)
@@ -363,6 +363,7 @@ int main(int argc, char *argv[]) {
 
   ReleaseGrid(&velf0);
   ReleaseGrid(&velf1);
+  ReleaseGrid(&velf2);
 
   printf("De-Allocation correct\n");
 }
