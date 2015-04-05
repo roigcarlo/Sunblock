@@ -43,36 +43,44 @@ void ReleaseGrid(T * grid, const uint &align) {
 }
 
 // Index calculation
+class Indexer {
+public:
+  /** 
+   * Calculates the standard index
+   * @BW: BorderWidth
+   **/
+  static uint GetIndex(
+      const uint &BW,
+      const uint &i, const uint &j, const uint &k,
+      const uint &X, const uint &Y, const uint &Z) {
+    return k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
+  }
+};
 
-/** 
- * Calculates the standard index
- * @BW: BorderWidth
- **/
-uint CalculateIndex(
-    const uint &BW,
-    const uint &i, const uint &j, const uint &k,
-    const uint &X, const uint &Y, const uint &Z) {
-  return k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-}
+class MortonIndexer : Indexer {
+public:
+  /** 
+   * Calculates the morton index
+   * @BW: BorderWidth
+   **/
+  static uint GetIndex(
+      const uint &i, const uint &j, const uint &k,
+      const uint &X, const uint &Y, const uint &Z) {
+    // To be implemented
+    return 0;
+  } 
+};
 
-/** 
- * Calculates the morton index
- * @BW: BorderWidth
- **/
-uint CalculateMortonIndex(
-    const uint &i, const uint &j, const uint &k,
-    const uint &X, const uint &Y, const uint &Z) {
-  // To be implemented
-  return 0;
-} 
-
-/** 
- * Calculates the Peano index
- * @BW: BorderWidth
- **/
-uint CalculatePeanoIndex(
-    const uint &i, const uint &j, const uint &k,
-    const uint &X, const uint &Y, const uint &Z) {
-  // To be implemented
-  return 0;
-}
+class PeanoIndexer : Indexer {
+public:
+  /** 
+   * Calculates the Peano index
+   * @BW: BorderWidth
+   **/
+  static uint GetIndex(
+      const uint &i, const uint &j, const uint &k,
+      const uint &X, const uint &Y, const uint &Z) {
+    // To be implemented
+    return 0;
+  }
+};

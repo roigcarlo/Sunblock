@@ -76,8 +76,8 @@ void InitializeVelocity(Triple * field,
   for(uint k = BWP; k < Z + BWP; k++) {
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++ ) {
-        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][0] = -omega * (double)(j-(Y+1.0)/2.0);
-        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][1] =  omega * (double)(i-(X+1.0)/2.0);
+        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][0] = -omega * (double)(j-(Y+1.0)/2.0) * dx;
+        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][1] =  omega * (double)(i-(X+1.0)/2.0) * dx;
         field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][2] =  0.0;
 
         maxv = std::max((double)abs(field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][0]),maxv);
@@ -199,75 +199,6 @@ void precalculateBackAndForw(U * fieldA, U * backward, U * forward,
 
 }
 
-template <typename T, typename U>
-void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * forward,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
-    for(uint j = BWP; j < Y + BWP; j++) {
-      for(uint i = BWP; i < X + BWP; i++) {
-        bfecc<Interpolate,CalculateIndex>(gridB,gridA,gridA,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
-      }
-    }
-  }
-
-  #pragma omp barrier
-
-  for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
-    for(uint j = BWP; j < Y + BWP; j++) {
-      for(uint i = BWP; i < X + BWP; i++) {
-        bfecc<Interpolate,CalculateIndex>(gridC,gridA,gridB,fieldA,dx,dt,1.0,1.5,-0.5,BW,i,j,k,X,Y,Z);
-      }
-    } 
-  }
-
-  #pragma omp barrier
-
-  for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
-    for(uint j = BWP; j < Y + BWP; j++) {
-      for(uint i = BWP; i < X + BWP; i++) {
-        bfecc<Interpolate,CalculateIndex>(gridA,gridA,gridC,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
-      }
-    }
-  }
-}
-
-template <typename T, typename U>
-void advectionBlock(T * gridA, T * gridB, T * gridC, U * fieldA, U * fieldB,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  // Backward
-  for(uint kk = 0; kk < NB; kk++)
-    for(uint jj = 0; jj < NB; jj++)
-      for(uint ii = 0; ii < NB; ii++)
-        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads()) 
-          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-              bfecc<Interpolate,CalculateIndex>(gridB,gridA,gridA,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
-
-  #pragma omp barrier
-
-  // Forward 
-  for(uint kk = 0; kk < NB; kk++)
-    for(uint jj = 0; jj < NB; jj++)
-      for(uint ii = 0; ii < NB; ii++)
-        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
-          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-              bfecc<Interpolate,CalculateIndex>(gridC,gridA,gridB,fieldA,dx,dt,1.0,1.5,-0.5,BW,i,j,k,X,Y,Z);
-
-  #pragma omp barrier
- 
-  // Backward
-  for(uint kk = 0; kk < NB; kk++)
-    for(uint jj = 0; jj < NB; jj++)
-      for(uint ii = 0; ii < NB; ii++)
-        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
-          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-              bfecc<Interpolate,CalculateIndex>(gridA,gridA,gridC,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
-}
-
 template <typename T>
 void difussion(T * &gridA, T * &gridB,
     const uint &X, const uint &Y, const uint &Z) {
@@ -325,9 +256,13 @@ int main(int argc, char *argv[]) {
   WriteHeatFocus(step0,N,N,N);
   InitializeVelocity(velf0,N,N,N);
 
-  dt = 0.25 * CFL*h/maxv;
+  dt = 0.05; //0.25 * CFL*h/maxv;
 
   io.WriteGidMesh(step0,N,N,N);
+
+  typedef BfeccSolver<PrecisionType,Triple,Indexer>    BfeccSolverType;
+
+  BfeccSolverType AdvectonStep(step0,step1,step2,velf0,dx,dt,BW,N,N,N);
   
   #pragma omp parallel
   #pragma omp single
@@ -341,9 +276,8 @@ int main(int argc, char *argv[]) {
 
   #pragma omp parallel
   { 
-    precalculateBackAndForw(velf0,velf1,velf2,N,N,N);
     for(int i = 0; i < steeps; i++) {
-      advection(step0,step1,step2,velf0,velf1,velf2,N,N,N);
+      AdvectonStep.Execute();
     }
   }
 
