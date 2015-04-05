@@ -38,10 +38,11 @@ void bfecc(VariableType * phi, VariableType * phi_auxA, VariableType * phi_auxB,
     Variable3DType * field,
     const double &dx,   const double &dt,
     const double &sign, const double &weightA, const double &weightB,
+    const uint &BW,
     const uint &i, const uint &j, const uint &k,
     const uint &X, const uint &Y, const uint &Z) {
 
-  uint cell = IndexFunction(i,j,k,X,Y,Z);
+  uint cell = IndexFunction(i,j,k,BW,X,Y,Z);
 
   Triple origin;
   Triple displacement;

@@ -15,7 +15,9 @@
 
 const double PI = 3.14159265;
 
-uint N = 0;
+uint N          = 0;
+uint NB         = 0;
+uint NE         = 0;
 uint OutputStep = 0;
 
 double dx       =  0.0;
@@ -26,8 +28,6 @@ double omega    =  1.0;
 double maxv     =  0.0;
 double CFL      =  2.0;
 double cellSize =  1.0;
-
-typedef double Triple[3];
 
 void GlobalToLocal(Triple coord, double f) { 
   if(f==1.0) 
@@ -206,8 +206,7 @@ void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * fo
   for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++) {
-        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-        gridB[cell] = Interpolate(backward[cell],gridA,N,N,N);
+        bfecc<Interpolate,CalculateIndex>(gridB,gridA,gridA,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
       }
     }
   }
@@ -217,8 +216,7 @@ void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * fo
   for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++) {
-        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-        gridC[cell] = 1.5 * gridA[cell] - 0.5 * Interpolate(forward[cell],gridB,N,N,N);
+        bfecc<Interpolate,CalculateIndex>(gridC,gridA,gridB,fieldA,dx,dt,1.0,1.5,-0.5,BW,i,j,k,X,Y,Z);
       }
     } 
   }
@@ -228,11 +226,46 @@ void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * fo
   for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++) {
-        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-        gridA[cell] = Interpolate(backward[cell],gridC,N,N,N);
+        bfecc<Interpolate,CalculateIndex>(gridA,gridA,gridC,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
       }
     }
   }
+}
+
+template <typename T, typename U>
+void advectionBlock(T * gridA, T * gridB, T * gridC, U * fieldA, U * fieldB,
+    const uint &X, const uint &Y, const uint &Z) {
+
+  // Backward
+  for(uint kk = 0; kk < NB; kk++)
+    for(uint jj = 0; jj < NB; jj++)
+      for(uint ii = 0; ii < NB; ii++)
+        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads()) 
+          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
+            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
+              bfecc<Interpolate,CalculateIndex>(gridB,gridA,gridA,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
+
+  #pragma omp barrier
+
+  // Forward 
+  for(uint kk = 0; kk < NB; kk++)
+    for(uint jj = 0; jj < NB; jj++)
+      for(uint ii = 0; ii < NB; ii++)
+        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
+          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
+            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
+              bfecc<Interpolate,CalculateIndex>(gridC,gridA,gridB,fieldA,dx,dt,1.0,1.5,-0.5,BW,i,j,k,X,Y,Z);
+
+  #pragma omp barrier
+ 
+  // Backward
+  for(uint kk = 0; kk < NB; kk++)
+    for(uint jj = 0; jj < NB; jj++)
+      for(uint ii = 0; ii < NB; ii++)
+        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
+          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
+            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
+              bfecc<Interpolate,CalculateIndex>(gridA,gridA,gridC,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
 }
 
 template <typename T>
@@ -247,42 +280,6 @@ void difussion(T * &gridA, T * &gridB,
       } 
     }
   }
-}
-
-template <typename T, typename U>
-void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * fieldB,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  // Backward
-  for(uint kk = 0; kk < NB; kk++)
-    for(uint jj = 0; jj < NB; jj++)
-      for(uint ii = 0; ii < NB; ii++)
-        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads()) 
-          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-              bfecc_kernel(gridB,gridA,gridA,fieldA,-1.0,0.0,1.0,i,j,k,X,Y,Z);
-
-  #pragma omp barrier
-
-  // Forward 
-  for(uint kk = 0; kk < NB; kk++)
-    for(uint jj = 0; jj < NB; jj++)
-      for(uint ii = 0; ii < NB; ii++)
-        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
-          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-              bfecc_kernel(gridC,gridA,gridB,fieldA,1.0,1.5,-0.5,i,j,k,X,Y,Z);
-
-  #pragma omp barrier
- 
-  // Backward
-  for(uint kk = 0; kk < NB; kk++)
-    for(uint jj = 0; jj < NB; jj++)
-      for(uint ii = 0; ii < NB; ii++)
-        for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
-          for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-            for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-              bfecc_kernel(gridA,gridA,gridC,fieldA,-1.0,0.0,1.0,i,j,k,X,Y,Z);
 }
 
 int main(int argc, char *argv[]) {
@@ -354,8 +351,8 @@ int main(int argc, char *argv[]) {
 
   duration = FETCHTIME
 
-  printf("Total time:\t %d s\n",duration);
-  printf("Step  time:\t %d s\n",duration\steeps);
+  printf("Total time:\t %f s\n",duration);
+  printf("Step  time:\t %f s\n",duration/steeps);
 
   ReleaseGrid(&step0);
   ReleaseGrid(&step1);

@@ -25,4 +25,6 @@ typedef unsigned int uint;
 const uint BWP             = BW / 2;   //  Boundary padding ( needed if we want to use SIMD )
 const PrecisionType ONESIX = 1.0/6.0;  //  1/6
 
+typedef PrecisionType Triple[3];
+
 #endif
