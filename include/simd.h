@@ -7,14 +7,14 @@
   #ifdef USE_DOUBLE
     #define ALING 16
     #define VP    2
-    #define VADD(A,B)							_mm_add_pd((A),(B))
+    #define VADD(A,B)             _mm_add_pd((A),(B))
     #define VMUL(A,B)             _mm_mul_pd((A),(B))
     #define VLOAD( A)             _mm_load_pd((A)) 
     #define VSTORE(A,B)           _mm_store_pd((A),(B))
     #define VFMA(A,B,C)           _mm128_fmadd_pd((A),(B),(C))
 
     typedef __m128d VectorType;
-    const VectorType mmONESIX = 	_mm_set_pd(ONESIX,ONESIX);
+    const VectorType mmONESIX =   _mm_set_pd(ONESIX,ONESIX);
   #endif
 
   #ifdef USE_FLOAT
@@ -27,7 +27,7 @@
     #define VFMA(A,B,C)           _mm128_fmadd_ps((A),(B),(C))
 
     typedef __m128 VectorType;
-    const VectorType mmONESIX = 	_mm_set_ps(ONESIX,ONESIX,ONESIX,ONESIX);
+    const VectorType mmONESIX =   _mm_set_ps(ONESIX,ONESIX,ONESIX,ONESIX);
   #endif
 #endif
 #ifdef USE_AVX2
@@ -41,7 +41,7 @@
     #define VFMA(A,B,C)           _mm256_fmadd_pd((A),(B),(C))
 
     typedef __m256d VectorType;
-    const VectorType mmONESIX = 	_mm256_set_pd(ONESIX,ONESIX,ONESIX,ONESIX);
+    const VectorType mmONESIX =   _mm256_set_pd(ONESIX,ONESIX,ONESIX,ONESIX);
   #endif
 
   #ifdef USE_FLOAT
@@ -54,7 +54,7 @@
     #define VFMA(A,B,C)           _mm256_fmadd_ps((A),(B),(C))
 
     typedef __m256 VectorType;
-    const VectorType mmONESIX = 	_mm256_set_ps(ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX);
+    const VectorType mmONESIX =   _mm256_set_ps(ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX);
   #endif
 #endif
 
