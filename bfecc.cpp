@@ -109,8 +109,39 @@ void WriteHeatFocus(T * gridA,
 
 }
 
+void Interpolate(Triple prevDelta, Triple prevVeloc, Triple * field,
+    const uint &X, const uint &Y, const uint &Z) {
+ 
+  uint pi,pj,pk,ni,nj,nk;
+
+  GlobalToLocal(prevDelta,idx);
+
+  pi = floor(prevDelta[0]); ni = pi+1;
+  pj = floor(prevDelta[1]); nj = pj+1;
+  pk = floor(prevDelta[2]); nk = pk+1;
+
+  PrecisionType Nx, Ny, Nz;
+
+  Nx = 1-(prevDelta[0] - floor(prevDelta[0]));
+  Ny = 1-(prevDelta[1] - floor(prevDelta[1]));
+  Nz = 1-(prevDelta[2] - floor(prevDelta[2]));
+
+  for(int d = 0; d < 3; d++) {
+    prevVeloc[d] = (
+      field[pk*(Z+BW)*(Y+BW)+pj*(Y+BW)+pi][d] * (    Nx) * (    Ny) * (    Nz) +
+      field[pk*(Z+BW)*(Y+BW)+pj*(Y+BW)+ni][d] * (1 - Nx) * (    Ny) * (    Nz) +
+      field[pk*(Z+BW)*(Y+BW)+nj*(Y+BW)+pi][d] * (    Nx) * (1 - Ny) * (    Nz) +
+      field[pk*(Z+BW)*(Y+BW)+nj*(Y+BW)+ni][d] * (1 - Nx) * (1 - Ny) * (    Nz) +
+      field[nk*(Z+BW)*(Y+BW)+pj*(Y+BW)+pi][d] * (    Nx) * (    Ny) * (1 - Nz) +
+      field[nk*(Z+BW)*(Y+BW)+pj*(Y+BW)+ni][d] * (1 - Nx) * (    Ny) * (1 - Nz) +
+      field[nk*(Z+BW)*(Y+BW)+nj*(Y+BW)+pi][d] * (    Nx) * (1 - Ny) * (1 - Nz) +
+      field[nk*(Z+BW)*(Y+BW)+nj*(Y+BW)+ni][d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
+    );
+  }
+}
+
 template <typename T>
-double bfceeInterpolationSteep(Triple prevDelta, T * gridA,
+double Interpolate(Triple prevDelta, T * gridA,
     const uint &X, const uint &Y, const uint &Z) {
 
   uint pi,pj,pk,ni,nj,nk;
@@ -170,7 +201,7 @@ void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * fo
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++) {
         uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-        gridB[cell] = bfceeInterpolationSteep(backward[cell],gridA,N,N,N);
+        gridB[cell] = Interpolate(backward[cell],gridA,N,N,N);
       }
     }
   }
@@ -181,7 +212,7 @@ void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * fo
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++) {
         uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-        gridC[cell] = 1.5 * gridA[cell] - 0.5 * bfceeInterpolationSteep(forward[cell],gridB,N,N,N);
+        gridC[cell] = 1.5 * gridA[cell] - 0.5 * Interpolate(forward[cell],gridB,N,N,N);
       }
     } 
   }
@@ -192,7 +223,7 @@ void advection(T * gridA, T * gridB, T * gridC, U * fieldA, U * backward, U * fo
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++) {
         uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-        gridA[cell] = bfceeInterpolationSteep(backward[cell],gridC,N,N,N);
+        gridA[cell] = Interpolate(backward[cell],gridC,N,N,N);
       }
     }
   }
