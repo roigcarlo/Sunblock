@@ -302,7 +302,7 @@ int main(int argc, char *argv[]) {
   { 
     precalculateBackAndForw(velf0,velf1,velf2,N,N,N);
     for(int i = 0; i < steeps; i++) {
-        advection(step0,step1,step2,velf0,velf1,velf2,N,N,N);
+      advection(step0,step1,step2,velf0,velf1,velf2,N,N,N);
     }
   }
 
@@ -310,8 +310,8 @@ int main(int argc, char *argv[]) {
 
   duration = FETCHTIME
 
-  std::cout << "Total time:\t" << duration << std::endl;
-  std::cout << "Step  time:\t" << duration / steeps << std::endl;
+  printf("Total time:\t %d s\n",duration);
+  printf("Step  time:\t %d s\n",duration);
 
   ReleaseGrid(&step0);
   ReleaseGrid(&step1);
