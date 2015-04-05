@@ -24,10 +24,17 @@ void AllocateGrid(T * grid,
 template <typename T>
 void ReleaseGrid(T * grid) {
 
-  // Note: free function should be used with the appropiate _aligned_free if
-  //  compiled in widnows systems.
-
   free(*grid);
+}
 
-
+template <typename T>
+void ReleaseGrid(T * grid, const uint &align) {
+  
+// Memory allocated with _aligned_malloc cannot be 
+//  released using free. 
+#ifdef _WIN32
+  _aligned_free(*grid);
+#else
+  free(*grid);
+#endif
 }
