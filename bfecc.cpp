@@ -249,10 +249,15 @@ void difussion(T * &gridA, T * &gridB,
 
 int main(int argc, char *argv[]) {
 
-  N  = atoi(argv[1]);
-  int steeps = atoi(argv[2]);
-  h = 1;
-  dx = h/N;
+  N           = atoi(argv[1]);
+  int steeps  = atoi(argv[2]);
+  h           = atoi(argv[3]);
+
+  NB          = atoi(argv[4]);
+  NE          = N/NB;
+
+  dx          = h/N;
+  idx         = 1.0/dx;
 
   struct timeval start, end;
 
@@ -289,12 +294,13 @@ int main(int argc, char *argv[]) {
 
   io.WriteGidMesh(step0,N,N,N);
   
-  printf("Begin\n");
-  printf("--------------------------\n");
   #pragma omp parallel
   #pragma omp single
-  printf("Runing with %d OMP Threads\n",omp_get_num_threads());
-  printf("--------------------------\n");
+  {
+    printf("-------------------\n");
+    printf("Running with OMP %d\n",omp_get_num_threads());
+    printf("-------------------\n");
+  }
 
   gettimeofday(&start, NULL);
 
