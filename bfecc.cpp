@@ -262,7 +262,7 @@ int main(int argc, char *argv[]) {
 
   typedef BfeccSolver<PrecisionType,Triple,Indexer>    BfeccSolverType;
 
-  BfeccSolverType AdvectonStep(step0,step1,step2,velf0,dx,dt,BW,N,N,N);
+  BfeccSolverType AdvectonStep(step0,step1,step2,velf0,dx,dt,BW,N,N,N,NB,NE);
   
   #pragma omp parallel
   #pragma omp single

@@ -2,25 +2,10 @@
 
 #include "defines.h"
 
-template <typename T>
-inline void stencilCross(T * gridA, T * gridB,
-    const uint &cell, 
-    const uint &X, const uint &Y, const uint &Z) {
-  
-  gridB[cell] = (
-    gridA[cell - 1]   +                       // Left
-    gridA[cell + 1]   +                       // Right
-    gridA[cell - (X+BW)]   +                  // Up
-    gridA[cell + (X+BW)]   +                  // Down
-    gridA[cell - (Y+BW)*(X+BW)] +             // Front
-    gridA[cell + (Y+BW)*(X+BW)] ) * ONESIX;   // Back
-}
-
 template <
     typename VariableType, 
     typename Variable3DType,
     typename Index
-    //typename Interpolate
 >
 class Solver {
 public:
@@ -28,34 +13,38 @@ public:
   ~Solver(){};
 
   virtual void Execute(){};
-};
 
+};
 
 template <
     typename VariableType, 
     typename Variable3DType,
     typename Index
-    //typename Interpolate
 >
 class BfeccSolver : public Solver<VariableType,Variable3DType,Index> {
 public:
   BfeccSolver(
       VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
-      Variable3DType * Field, 
+      Variable3DType * Field,
       const double &Dx, const double &Dt,
       const uint &BW,
-      const uint &X, const uint &Y, const uint &Z) :
+      const uint &X, const uint &Y, const uint &Z,
+      const uint &NB, const uint &NE) :
+    Solver<VariableType,Variable3DType,Index>(),
     mpPhi(Phi),
     mpPhiAuxA(PhiAuxA), 
     mpPhiAuxB(PhiAuxB),
-    mpField(Field), 
+    mpField(Field),
     mDx(Dx),
+    mIdx(1.0/Dx),
     mDt(Dt),
     mBW(BW),
     mBWP(BW/2),
     mX(X),
     mY(Y),
-    mZ(Z) {};
+    mZ(Z),
+    mNB(NB),
+    mNE(NE) {};
 
   ~BfeccSolver() {};
 
@@ -71,7 +60,7 @@ public:
 
     uint pi,pj,pk,ni,nj,nk;
 
-    GlobalToLocal(prevDelta,1.0/mDx);
+    GlobalToLocal(prevDelta,mIdx);
 
     pi = floor(prevDelta[0]); ni = pi+1;
     pj = floor(prevDelta[1]); nj = pj+1;
@@ -84,17 +73,20 @@ public:
     Nz = 1-(prevDelta[2] - floor(prevDelta[2]));
 
     return (
-      Phi[pk*(mZ+mBW)*(mY+mBW)+pj*(mY+mBW)+pi] * (    Nx) * (    Ny) * (    Nz) +
-      Phi[pk*(mZ+mBW)*(mY+mBW)+pj*(mY+mBW)+ni] * (1 - Nx) * (    Ny) * (    Nz) +
-      Phi[pk*(mZ+mBW)*(mY+mBW)+nj*(mY+mBW)+pi] * (    Nx) * (1 - Ny) * (    Nz) +
-      Phi[pk*(mZ+mBW)*(mY+mBW)+nj*(mY+mBW)+ni] * (1 - Nx) * (1 - Ny) * (    Nz) +
-      Phi[nk*(mZ+mBW)*(mY+mBW)+pj*(mY+mBW)+pi] * (    Nx) * (    Ny) * (1 - Nz) +
-      Phi[nk*(mZ+mBW)*(mY+mBW)+pj*(mY+mBW)+ni] * (1 - Nx) * (    Ny) * (1 - Nz) +
-      Phi[nk*(mZ+mBW)*(mY+mBW)+nj*(mY+mBW)+pi] * (    Nx) * (1 - Ny) * (1 - Nz) +
-      Phi[nk*(mZ+mBW)*(mY+mBW)+nj*(mY+mBW)+ni] * (1 - Nx) * (1 - Ny) * (1 - Nz)
+      Phi[Index::GetIndex(pi,pj,pk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (    Nz) +
+      Phi[Index::GetIndex(ni,pj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (    Nz) +
+      Phi[Index::GetIndex(pi,nj,pk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (    Nz) +
+      Phi[Index::GetIndex(ni,nj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (    Nz) +
+      Phi[Index::GetIndex(pi,pj,nk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (1 - Nz) +
+      Phi[Index::GetIndex(ni,pj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (1 - Nz) +
+      Phi[Index::GetIndex(pi,nj,nk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (1 - Nz) +
+      Phi[Index::GetIndex(ni,nj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (1 - Nz)
     );
   }
 
+  /**
+   * Executes the solver 
+   **/
   virtual void Execute() {
 
     for(uint k = mBWP + omp_get_thread_num(); k < mZ + mBWP; k+=omp_get_num_threads()) {
@@ -128,6 +120,43 @@ public:
   }
 
   /**
+   * Executes the solver using blocking
+   **/
+  virtual void ExecuteBlock() {
+
+    // Backward
+    for(uint kk = 0; kk < mNB; kk++)
+      for(uint jj = 0; jj < mNB; jj++)
+        for(uint ii = 0; ii < mNB; ii++)
+          for(uint k = mBWP + (kk * mNE) + omp_get_thread_num(); k < mBWP + ((kk+1) * mNE); k+=omp_get_num_threads()) 
+            for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
+              for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
+                Apply(mpPhiAuxA,mpPhi,mpPhi,-1.0,0.0,1.0,i,j,k);
+
+    #pragma omp barrier
+
+    // Forward 
+    for(uint kk = 0; kk < mNB; kk++)
+      for(uint jj = 0; jj < mNB; jj++)
+        for(uint ii = 0; ii < mNB; ii++)
+          for(uint k = mBWP + (kk * mNE) + omp_get_thread_num(); k < mBWP + ((kk+1) * mNE); k+=omp_get_num_threads()) 
+            for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
+              for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
+                Apply(mpPhiAuxB,mpPhi,mpPhiAuxA,1.0,1.5,-0.5,i,j,k);
+
+    #pragma omp barrier
+   
+    // Backward
+    for(uint kk = 0; kk < mNB; kk++)
+      for(uint jj = 0; jj < mNB; jj++)
+        for(uint ii = 0; ii < mNB; ii++)
+          for(uint k = mBWP + (kk * mNE) + omp_get_thread_num(); k < mBWP + ((kk+1) * mNE); k+=omp_get_num_threads()) 
+            for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
+              for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
+                Apply(mpPhi,mpPhi,mpPhiAuxB,-1.0,0.0,1.0,i,j,k);
+  }
+
+  /**
    * Performs the bfecc operation over a given element
    * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
    * weightA: weigth of the first  operator (A)
@@ -151,8 +180,9 @@ public:
       displacement[d] = origin[d] + Sign * mpField[cell][d]*mDt;
     }
 
-    Phi[cell] = WeightA * PhiAuxA[cell] + 
-                WeightB * Interpolate(displacement,PhiAuxB);
+    VariableType iPhi = Interpolate(displacement,PhiAuxB);
+
+    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
   }
 
 private:
@@ -166,13 +196,14 @@ private:
    * @dt:         diferential of time
    **/
    
-  VariableType * mpPhi;
-  VariableType * mpPhiAuxA;
-  VariableType * mpPhiAuxB;
+  VariableType   * mpPhi;
+  VariableType   * mpPhiAuxA;
+  VariableType   * mpPhiAuxB;
 
   Variable3DType * mpField;
 
   const double mDx;
+  const double mIdx;
   const double mDt;
 
   const uint mBW;
@@ -181,39 +212,22 @@ private:
   const uint mX; 
   const uint mY; 
   const uint mZ;
+
+  const uint mNB;
+  const uint mNE;
 };
 
-  /*void advectionBlock(T * gridA, T * gridB, T * gridC, U * fieldA, U * fieldB,
-      const uint &X, const uint &Y, const uint &Z) {
-
-    // Backward
-    for(uint kk = 0; kk < NB; kk++)
-      for(uint jj = 0; jj < NB; jj++)
-        for(uint ii = 0; ii < NB; ii++)
-          for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads()) 
-            for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-              for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-                bfecc<T,U,Indexer>(gridB,gridA,gridA,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
-
-    #pragma omp barrier
-
-    // Forward 
-    for(uint kk = 0; kk < NB; kk++)
-      for(uint jj = 0; jj < NB; jj++)
-        for(uint ii = 0; ii < NB; ii++)
-          for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
-            for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-              for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-                bfecc<T,U,Indexer>(gridC,gridA,gridB,fieldA,dx,dt,1.0,1.5,-0.5,BW,i,j,k,X,Y,Z);
-
-    #pragma omp barrier
-   
-    // Backward
-    for(uint kk = 0; kk < NB; kk++)
-      for(uint jj = 0; jj < NB; jj++)
-        for(uint ii = 0; ii < NB; ii++)
-          for(uint k = BWP + (kk * NE) + omp_get_thread_num(); k < BWP + ((kk+1) * NE); k+=omp_get_num_threads())
-            for(uint j = BWP + (jj * NE); j < BWP + ((jj+1) * NE); j++)
-              for(uint i = BWP + (ii * NE); i < BWP + ((ii+1) * NE); i++)
-                bfecc<T,U,Indexer>(gridA,gridA,gridC,fieldA,dx,dt,-1.0,0.0,1.0,BW,i,j,k,X,Y,Z);
-  }*/
+// This does not belong here! put it in a class
+template <typename T>
+inline void stencilCross(T * gridA, T * gridB,
+    const uint &cell, 
+    const uint &X, const uint &Y, const uint &Z) {
+  
+  gridB[cell] = (
+    gridA[cell - 1]   +                       // Left
+    gridA[cell + 1]   +                       // Right
+    gridA[cell - (X+BW)]   +                  // Up
+    gridA[cell + (X+BW)]   +                  // Down
+    gridA[cell - (Y+BW)*(X+BW)] +             // Front
+    gridA[cell + (Y+BW)*(X+BW)] ) * ONESIX;   // Back
+}
