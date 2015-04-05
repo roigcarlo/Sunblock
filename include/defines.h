@@ -7,17 +7,17 @@ typedef unsigned int uint;
 
 #ifdef USE_NOVEC
   typedef double  PrecisionType;
-  const uint BW              = 2;        //  Boundary width   ( needed if we want to use SIMD )
+  const uint BW            = 2;        //  Boundary width   ( needed if we want to use SIMD )
 #endif
 
 #ifdef USE_DOUBLE
   typedef double  PrecisionType;
-  const uint BW              = 8;        //  Boundary width   ( needed if we want to use SIMD )
+  const uint BW            = 8;        //  Boundary width   ( needed if we want to use SIMD )
 #endif
 
 #ifdef USE_FLOAT
   typedef float  PrecisionType;
-  const uint BW              = 16;       //  Boundary width   ( needed if we want to use SIMD )
+  const uint BW            = 16;       //  Boundary width   ( needed if we want to use SIMD )
 #endif
 
 const uint BWP             = BW / 2;   //  Boundary padding ( needed if we want to use SIMD )
