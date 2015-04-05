@@ -1,7 +1,9 @@
 #ifndef DEFINES_H
 #define DEFINES_H
 
+#ifdef _WIN32
 typedef unsigned int uint;
+#endif
 
 #define FETCHTIME ((end.tv_sec  - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
 
