@@ -311,7 +311,7 @@ int main(int argc, char *argv[]) {
   duration = FETCHTIME
 
   printf("Total time:\t %d s\n",duration);
-  printf("Step  time:\t %d s\n",duration);
+  printf("Step  time:\t %d s\n",duration\steeps);
 
   ReleaseGrid(&step0);
   ReleaseGrid(&step1);
