@@ -1,30 +1,16 @@
-#include <iostream>
-#include <iomanip>
-#include <fstream>
-
-#include <iostream>     // std::cout, std::right, std::endl
-#include <iomanip>      // std::setw
-#include <sstream>
-
 #include <sys/time.h>
 #include <sys/types.h>
 #include <omp.h>
 #include <math.h>
-#include <malloc.h>
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <errno.h>
 
-// Vectorial
-#include <emmintrin.h>
-#include <immintrin.h>
-
 // Solver
 #include "include/defines.h"
 #include "include/stencils.h"
 #include "include/file_io.h"
-
 #include "include/utils.h"
 
 const double PI = 3.14159265;
