@@ -21,25 +21,43 @@
 #include <immintrin.h>
 
 // Solver
-#include "includes/defines.h"
-#include "includes/stencils.h"
-#include "includes/file_io.h"
+#include "include/defines.h"
+#include "include/stencils.h"
+#include "include/file_io.h"
 
-#include "includes/utils.h"
+#include "include/utils.h"
 
 const double PI = 3.14159265;
 
 uint N = 0;
 uint OutputStep = 0;
 
-double dx = 0;
-double dt = 0.1;
-double h = 16;
-double omega = 1;
-double maxv = 0.0;
-double CFL = 2;
+double dx       =  0.0;
+double idx      =  0.0;
+double dt       =  0.1; 
+double h        = 16.0;
+double omega    =  1.0;
+double maxv     =  0.0;
+double CFL      =  2.0;
+double cellSize =  1.0;
 
 typedef double Triple[3];
+
+void GlobalToLocal(Triple coord, double f) { 
+  if(f==1.0) 
+    return; 
+  for(int d = 0; d < 3; d++) {
+    coord[d] *= f; 
+  }
+}
+ 
+void LocalToGlobal(Triple coord, double f) { 
+  if(f==1.0) 
+    return;
+  for(int d = 0; d < 3; d++) { 
+    coord[d] *= f;
+  }
+}
 
 template <typename T>
 void Initialize(T * gridA, T * gridB, 
