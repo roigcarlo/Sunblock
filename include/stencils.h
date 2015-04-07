@@ -5,7 +5,7 @@
 template <
     typename VariableType, 
     typename Variable3DType,
-    typename Index
+    typename IndexType
 >
 class Solver {
 public:
@@ -19,9 +19,9 @@ public:
 template <
     typename VariableType, 
     typename Variable3DType,
-    typename Index
+    typename IndexType
 >
-class BfeccSolver : public Solver<VariableType,Variable3DType,Index> {
+class BfeccSolver : public Solver<VariableType,Variable3DType,IndexType> {
 public:
   BfeccSolver(
       VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
@@ -30,7 +30,7 @@ public:
       const uint &BW,
       const uint &X, const uint &Y, const uint &Z,
       const uint &NB, const uint &NE) :
-    Solver<VariableType,Variable3DType,Index>(),
+    Solver<VariableType,Variable3DType,IndexType>(),
     mpPhi(Phi),
     mpPhiAuxA(PhiAuxA), 
     mpPhiAuxB(PhiAuxB),
@@ -73,14 +73,14 @@ public:
     Nz = 1-(prevDelta[2] - floor(prevDelta[2]));
 
     return (
-      Phi[Index::GetIndex(pi,pj,pk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (    Nz) +
-      Phi[Index::GetIndex(ni,pj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (    Nz) +
-      Phi[Index::GetIndex(pi,nj,pk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (    Nz) +
-      Phi[Index::GetIndex(ni,nj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (    Nz) +
-      Phi[Index::GetIndex(pi,pj,nk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (1 - Nz) +
-      Phi[Index::GetIndex(ni,pj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (1 - Nz) +
-      Phi[Index::GetIndex(pi,nj,nk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (1 - Nz) +
-      Phi[Index::GetIndex(ni,nj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (1 - Nz)
+      Phi[IndexType::GetIndex(pi,pj,pk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (    Nz) +
+      Phi[IndexType::GetIndex(ni,pj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (    Nz) +
+      Phi[IndexType::GetIndex(pi,nj,pk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (    Nz) +
+      Phi[IndexType::GetIndex(ni,nj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (    Nz) +
+      Phi[IndexType::GetIndex(pi,pj,nk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (1 - Nz) +
+      Phi[IndexType::GetIndex(ni,pj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (1 - Nz) +
+      Phi[IndexType::GetIndex(pi,nj,nk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (1 - Nz) +
+      Phi[IndexType::GetIndex(ni,nj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (1 - Nz)
     );
   }
 
@@ -89,7 +89,10 @@ public:
    **/
   virtual void Execute() {
 
-    for(uint k = mBWP + omp_get_thread_num(); k < mZ + mBWP; k+=omp_get_num_threads()) {
+    uint tid   = omp_get_thread_num();
+    uint tsize = omp_get_num_threads();
+
+    for(uint k = mBWP + tid; k < mZ + mBWP; k+= tsize) {
       for(uint j = mBWP; j < mY + mBWP; j++) {
         for(uint i = mBWP; i < mX + mBWP; i++) {
           Apply(mpPhiAuxA,mpPhi,mpPhi,-1.0,0.0,1.0,i,j,k);
@@ -99,7 +102,7 @@ public:
 
     #pragma omp barrier
 
-    for(uint k = mBWP + omp_get_thread_num(); k < mZ + mBWP; k+=omp_get_num_threads()) {
+    for(uint k = mBWP + tid; k < mZ + mBWP; k+= tsize) {
       for(uint j = mBWP; j < mY + mBWP; j++) {
         for(uint i = mBWP; i < mX + mBWP; i++) {
           Apply(mpPhiAuxB,mpPhi,mpPhiAuxA,1.0,1.5,-0.5,i,j,k);
@@ -109,7 +112,7 @@ public:
 
     #pragma omp barrier
 
-    for(uint k = mBWP + omp_get_thread_num(); k < mZ + mBWP; k+=omp_get_num_threads()) {
+    for(uint k = mBWP + tid; k < mZ + mBWP; k+= tsize) {
       for(uint j = mBWP; j < mY + mBWP; j++) {
         for(uint i = mBWP; i < mX + mBWP; i++) {
           Apply(mpPhi,mpPhi,mpPhiAuxB,-1.0,0.0,1.0,i,j,k);
@@ -124,11 +127,14 @@ public:
    **/
   virtual void ExecuteBlock() {
 
+    uint tid   = omp_get_thread_num();
+    uint tsize = omp_get_num_threads();
+
     // Backward
-    for(uint kk = 0; kk < mNB; kk++)
+    for(uint kk = tid; kk < mNB; kk+= tsize)
       for(uint jj = 0; jj < mNB; jj++)
         for(uint ii = 0; ii < mNB; ii++)
-          for(uint k = mBWP + (kk * mNE) + omp_get_thread_num(); k < mBWP + ((kk+1) * mNE); k+=omp_get_num_threads()) 
+          for(uint k = mBWP + (kk * mNE); k < mBWP + ((kk+1) * mNE); k++)
             for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
               for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
                 Apply(mpPhiAuxA,mpPhi,mpPhi,-1.0,0.0,1.0,i,j,k);
@@ -136,10 +142,10 @@ public:
     #pragma omp barrier
 
     // Forward 
-    for(uint kk = 0; kk < mNB; kk++)
+    for(uint kk = tid; kk < mNB; kk+= tsize)
       for(uint jj = 0; jj < mNB; jj++)
         for(uint ii = 0; ii < mNB; ii++)
-          for(uint k = mBWP + (kk * mNE) + omp_get_thread_num(); k < mBWP + ((kk+1) * mNE); k+=omp_get_num_threads()) 
+          for(uint k = mBWP + (kk * mNE); k < mBWP + ((kk+1) * mNE); k++)
             for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
               for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
                 Apply(mpPhiAuxB,mpPhi,mpPhiAuxA,1.0,1.5,-0.5,i,j,k);
@@ -147,10 +153,10 @@ public:
     #pragma omp barrier
    
     // Backward
-    for(uint kk = 0; kk < mNB; kk++)
+    for(uint kk = tid; kk < mNB; kk+= tsize)
       for(uint jj = 0; jj < mNB; jj++)
         for(uint ii = 0; ii < mNB; ii++)
-          for(uint k = mBWP + (kk * mNE) + omp_get_thread_num(); k < mBWP + ((kk+1) * mNE); k+=omp_get_num_threads()) 
+          for(uint k = mBWP + (kk * mNE); k < mBWP + ((kk+1) * mNE); k++)
             for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
               for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
                 Apply(mpPhi,mpPhi,mpPhiAuxB,-1.0,0.0,1.0,i,j,k);
@@ -167,7 +173,7 @@ public:
       const double &Sign, const double &WeightA, const double &WeightB,
       const uint &i, const uint &j, const uint &k) {
 
-    uint cell = Index::GetIndex(i,j,k,mBW,mX,mY,mZ);
+    uint cell = IndexType::GetIndex(i,j,k,mBW,mX,mY,mZ);
     
     Triple origin;
     Triple displacement;

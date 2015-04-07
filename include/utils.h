@@ -1,4 +1,6 @@
 // Memory allocation & de-allocation
+#include <malloc.h>
+
 #include "defines.h"
 
 template <typename T>
@@ -50,8 +52,8 @@ public:
    * @BW: BorderWidth
    **/
   static uint GetIndex(
-      const uint &BW,
       const uint &i, const uint &j, const uint &k,
+      const uint &BW,
       const uint &X, const uint &Y, const uint &Z) {
     return k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
   }
@@ -65,6 +67,7 @@ public:
    **/
   static uint GetIndex(
       const uint &i, const uint &j, const uint &k,
+      const uint &BW,
       const uint &X, const uint &Y, const uint &Z) {
     // To be implemented
     return 0;
@@ -79,6 +82,7 @@ public:
    **/
   static uint GetIndex(
       const uint &i, const uint &j, const uint &k,
+      const uint &BW,
       const uint &X, const uint &Y, const uint &Z) {
     // To be implemented
     return 0;

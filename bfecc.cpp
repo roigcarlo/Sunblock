@@ -29,6 +29,8 @@ double maxv     =  0.0;
 double CFL      =  2.0;
 double cellSize =  1.0;
 
+typedef Indexer IndexType;
+
 void GlobalToLocal(Triple coord, double f) { 
   if(f==1.0) 
     return; 
@@ -52,8 +54,8 @@ void Initialize(T * gridA, T * gridB,
   for(uint k = BWP; k < Z - BWP; k++) {
     for(uint j = BWP; j < Y - BWP; j++) {
       for(uint i = BWP; i < X - BWP; i++ ) {
-        gridA[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i] = 0.0;
-        gridB[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i] = 0.0;
+        gridA[IndexType::GetIndex(i,j,k,BW,X,Y,Z)] = 0.0;
+        gridB[IndexType::GetIndex(i,j,k,BW,X,Y,Z)] = 0.0;
       }
     }
   }
@@ -66,9 +68,9 @@ void InitializeVelocity(Triple * field,
   for(uint k = 0; k < Z + BW; k++) {
     for(uint j = 0; j < Y + BW; j++) {
       for(uint i = 0; i < X + BW; i++) {
-        field[k*(Y+BW)*(X+BW)+j*(X+BW)+i][0] = 0.0;
-        field[k*(Y+BW)*(X+BW)+j*(X+BW)+i][1] = 0.0;
-        field[k*(Y+BW)*(X+BW)+j*(X+BW)+i][2] = 0.0;
+        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][0] = 0.0;
+        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][1] = 0.0;
+        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][2] = 0.0;
       } 
     }
   }
@@ -76,12 +78,12 @@ void InitializeVelocity(Triple * field,
   for(uint k = BWP; k < Z + BWP; k++) {
     for(uint j = BWP; j < Y + BWP; j++) {
       for(uint i = BWP; i < X + BWP; i++ ) {
-        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][0] = -omega * (double)(j-(Y+1.0)/2.0) * dx;
-        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][1] =  omega * (double)(i-(X+1.0)/2.0) * dx;
-        field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][2] =  0.0;
+        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][0] = -omega * (double)(j-(Y+1.0)/2.0) * dx;
+        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][1] =  omega * (double)(i-(X+1.0)/2.0) * dx;
+        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][2] =  0.0;
 
-        maxv = std::max((double)abs(field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][0]),maxv);
-        maxv = std::max((double)abs(field[k*(Z+BW)*(Y+BW)+j*(Y+BW)+i][1]),maxv);
+        maxv = std::max((double)abs(field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][0]),maxv);
+        maxv = std::max((double)abs(field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][1]),maxv);
       }
     }
   }
@@ -106,7 +108,7 @@ void WriteHeatFocus(T * gridA,
         double rr = pow(X/6.0,2);  
         
         if(d2 < rr)
-          gridA[k*(Y+BW)*(X+BW)+j*(X+BW)+i] = 1.0 - d2/rr;
+          gridA[IndexType::GetIndex(i,j,k,BW,X,Y,Z)] = 1.0 - d2/rr;
       }
     }
   }
@@ -278,6 +280,14 @@ int main(int argc, char *argv[]) {
   { 
     for(int i = 0; i < steeps; i++) {
       AdvectonStep.Execute();
+      // #pragma omp single
+      // {
+      //   if(OutputStep == 0) {
+      //     io.WriteGidResults(step0,N,N,N,i);
+      //     OutputStep = 10;
+      //   }
+      //   OutputStep--;
+      // }
     }
   }
 
