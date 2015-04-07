@@ -9,7 +9,7 @@
 
 // Solver
 #include "include/defines.h"
-#include "include/stencils.h"
+#include "include/solvers.h"
 #include "include/file_io.h"
 #include "include/utils.h"
 
