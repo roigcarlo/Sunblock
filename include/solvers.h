@@ -1,87 +1,58 @@
 #include <sys/types.h>
 
 #include "defines.h"
+#include "utils.h"
+#include "block.h"
 
 template <
-    typename VariableType, 
-    typename Variable3DType,
-    typename IndexType
->
+  typename ResultType, 
+  typename IndexType,
+  typename BlockType,
+  typename InterpolateType
+  >
 class Solver {
 public:
-  Solver(){};
-  ~Solver(){};
+  Solver(){}
+  ~Solver(){}
 
-  virtual void Execute(){};
+  virtual void Execute(){}
 
 };
 
 template <
-    typename VariableType, 
-    typename Variable3DType,
-    typename IndexType
->
-class BfeccSolver : public Solver<VariableType,Variable3DType,IndexType> {
+  typename ResultType, 
+  typename IndexType,
+  typename BlockType,
+  typename InterpolateType
+  >
+class BfeccSolver : public Solver<ResultType,IndexType,BlockType,InterpolateType> {
 public:
-  BfeccSolver(
-      VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
-      Variable3DType * Field,
-      const double &Dx, const double &Dt,
-      const uint &BW,
-      const uint &X, const uint &Y, const uint &Z,
-      const uint &NB, const uint &NE) :
-    Solver<VariableType,Variable3DType,IndexType>(),
-    mpPhi(Phi),
-    mpPhiAuxA(PhiAuxA), 
-    mpPhiAuxB(PhiAuxB),
-    mpField(Field),
-    mDx(Dx),
-    mIdx(1.0/Dx),
-    mDt(Dt),
-    mBW(BW),
-    mBWP(BW/2),
-    mX(X),
-    mY(Y),
-    mZ(Z),
-    mNB(NB),
-    mNE(NE) {};
 
-  ~BfeccSolver() {};
+  BfeccSolver(BlockType * block) :
+    Solver<ResultType,IndexType,BlockType,InterpolateType>(),
+    pBlock(block),
+    pPhiA(block->pPhiA),
+    pPhiB(block->pPhiB), 
+    pPhiC(block->pPhiC),
+    pVelocity(block->pVelocity),
+    rDx(block->rDx),
+    rIdx(1.0/block->rDx),
+    rDt(block->rDt),
+    rBW(block->rBW),
+    rBWP(block->rBW/2),
+    rX(block->rX),
+    rY(block->rY),
+    rZ(block->rZ),
+    rNB(block->rNB),
+    rNE(block->rNE) {
 
-  void GlobalToLocal(Variable3DType coord, double f) { 
-    if(f==1.0) 
-      return; 
-    for(int d = 0; d < 3; d++) {
-      coord[d] *= f; 
+      pFactors = (double *)malloc(sizeof(double) * (rX+rBW) * (rY+rBW) * (rZ+rBW) * 8);
+
     }
-  }
 
-  double Interpolate(Variable3DType prevDelta, VariableType * Phi) {
+  ~BfeccSolver() {
 
-    uint pi,pj,pk,ni,nj,nk;
-
-    GlobalToLocal(prevDelta,mIdx);
-
-    pi = floor(prevDelta[0]); ni = pi+1;
-    pj = floor(prevDelta[1]); nj = pj+1;
-    pk = floor(prevDelta[2]); nk = pk+1;
-
-    double Nx, Ny, Nz;
-
-    Nx = 1-(prevDelta[0] - floor(prevDelta[0]));
-    Ny = 1-(prevDelta[1] - floor(prevDelta[1]));
-    Nz = 1-(prevDelta[2] - floor(prevDelta[2]));
-
-    return (
-      Phi[IndexType::GetIndex(pi,pj,pk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (    Nz) +
-      Phi[IndexType::GetIndex(ni,pj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (    Nz) +
-      Phi[IndexType::GetIndex(pi,nj,pk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (    Nz) +
-      Phi[IndexType::GetIndex(ni,nj,pk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (    Nz) +
-      Phi[IndexType::GetIndex(pi,pj,nk,mBW,mX,mY,mZ)] * (    Nx) * (    Ny) * (1 - Nz) +
-      Phi[IndexType::GetIndex(ni,pj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (    Ny) * (1 - Nz) +
-      Phi[IndexType::GetIndex(pi,nj,nk,mBW,mX,mY,mZ)] * (    Nx) * (1 - Ny) * (1 - Nz) +
-      Phi[IndexType::GetIndex(ni,nj,nk,mBW,mX,mY,mZ)] * (1 - Nx) * (1 - Ny) * (1 - Nz)
-    );
+    free(pFactors);
   }
 
   /**
@@ -92,34 +63,31 @@ public:
     uint tid   = omp_get_thread_num();
     uint tsize = omp_get_num_threads();
 
-    for(uint k = mBWP + tid; k < mZ + mBWP; k+= tsize) {
-      for(uint j = mBWP; j < mY + mBWP; j++) {
-        for(uint i = mBWP; i < mX + mBWP; i++) {
-          Apply(mpPhiAuxA,mpPhi,mpPhi,-1.0,0.0,1.0,i,j,k);
-        }
-      }
-    }
+    // Preinterpolation();
+
+    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
+      for(uint j = rBWP; j < rY + rBWP; j++)
+        for(uint i = rBWP; i < rX + rBWP; i++)
+          Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
+          // Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
 
     #pragma omp barrier
 
-    for(uint k = mBWP + tid; k < mZ + mBWP; k+= tsize) {
-      for(uint j = mBWP; j < mY + mBWP; j++) {
-        for(uint i = mBWP; i < mX + mBWP; i++) {
-          Apply(mpPhiAuxB,mpPhi,mpPhiAuxA,1.0,1.5,-0.5,i,j,k);
+    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
+      for(uint j = rBWP; j < rY + rBWP; j++)
+        for(uint i = rBWP; i < rX + rBWP; i++) {
+          Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
+          // ReverseApply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
         }
-      } 
-    }
 
     #pragma omp barrier
 
-    for(uint k = mBWP + tid; k < mZ + mBWP; k+= tsize) {
-      for(uint j = mBWP; j < mY + mBWP; j++) {
-        for(uint i = mBWP; i < mX + mBWP; i++) {
-          Apply(mpPhi,mpPhi,mpPhiAuxB,-1.0,0.0,1.0,i,j,k);
+    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
+      for(uint j = rBWP; j < rY + rBWP; j++)
+        for(uint i = rBWP; i < rX + rBWP; i++) {
+          Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
+          // Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
         }
-      }
-    }
-
   }
 
   /**
@@ -130,37 +98,128 @@ public:
     uint tid   = omp_get_thread_num();
     uint tsize = omp_get_num_threads();
 
-    // Backward
-    for(uint kk = tid; kk < mNB; kk+= tsize)
-      for(uint jj = 0; jj < mNB; jj++)
-        for(uint ii = 0; ii < mNB; ii++)
-          for(uint k = mBWP + (kk * mNE); k < mBWP + ((kk+1) * mNE); k++)
-            for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
-              for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
-                Apply(mpPhiAuxA,mpPhi,mpPhi,-1.0,0.0,1.0,i,j,k);
+    // Preinterpolation();
+
+    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
+      for(uint jj = 0; jj < rNB; jj++)
+        for(uint ii = 0; ii < rNB; ii++)
+          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
+            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
+              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
+                Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
+                // Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
 
     #pragma omp barrier
 
-    // Forward 
-    for(uint kk = tid; kk < mNB; kk+= tsize)
-      for(uint jj = 0; jj < mNB; jj++)
-        for(uint ii = 0; ii < mNB; ii++)
-          for(uint k = mBWP + (kk * mNE); k < mBWP + ((kk+1) * mNE); k++)
-            for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
-              for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
-                Apply(mpPhiAuxB,mpPhi,mpPhiAuxA,1.0,1.5,-0.5,i,j,k);
+    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
+      for(uint jj = 0; jj < rNB; jj++)
+        for(uint ii = 0; ii < rNB; ii++)
+          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
+            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
+              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
+                Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
+                // ReverseApply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
 
     #pragma omp barrier
    
-    // Backward
-    for(uint kk = tid; kk < mNB; kk+= tsize)
-      for(uint jj = 0; jj < mNB; jj++)
-        for(uint ii = 0; ii < mNB; ii++)
-          for(uint k = mBWP + (kk * mNE); k < mBWP + ((kk+1) * mNE); k++)
-            for(uint j = mBWP + (jj * mNE); j < mBWP + ((jj+1) * mNE); j++)
-              for(uint i = mBWP + (ii * mNE); i < mBWP + ((ii+1) * mNE); i++)
-                Apply(mpPhi,mpPhi,mpPhiAuxB,-1.0,0.0,1.0,i,j,k);
+    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
+      for(uint jj = 0; jj < rNB; jj++)
+        for(uint ii = 0; ii < rNB; ii++)
+          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
+            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
+              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
+                Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
+                // Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
   }
+
+  void Preinterpolation() {
+
+    uint tid   = omp_get_thread_num();
+    uint tsize = omp_get_num_threads();
+
+    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize) {
+      for(uint j = rBWP; j < rY + rBWP; j++) {
+        for(uint i = rBWP; i < rX + rBWP; i++) {
+
+          uint cell = IndexType::GetIndex(pBlock,i,j,k);
+
+          Variable3DType  origin;
+          Variable3DType  displacement;
+
+          origin[0] = i * rDx;
+          origin[1] = j * rDx;
+          origin[2] = k * rDx;
+
+          for(int d = 0; d < 3; d++) {
+            displacement[d] = origin[d] - pVelocity[cell][d] * rDt;
+          }
+
+          InterpolateType::CalculateFactors(pBlock,displacement,&pFactors[cell*8]);
+        }
+      }
+    }
+  }
+
+  /**
+   * Performs the bfecc operation over a given element
+   * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
+   * weightA: weigth of the first  operator (A)
+   * weightB: weigth of the second operator (B)
+   * @i,j,k:  Index of the cell
+   **/ 
+  void Apply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
+      const double &Sign, const double &WeightA, const double &WeightB,
+      const uint &i, const uint &j, const uint &k, double * Factors) {
+
+    uint cell = IndexType::GetIndex(pBlock,i,j,k);
+    
+    VariableType    iPhi;
+    Variable3DType  origin;
+    Variable3DType  displacement;
+
+    origin[0] = i * rDx;
+    origin[1] = j * rDx;
+    origin[2] = k * rDx;
+
+    for(int d = 0; d < 3; d++) {
+      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
+    }
+
+    InterpolateType::Interpolate(pBlock,PhiAuxB,&iPhi,displacement,Factors);
+
+    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
+  }
+
+  /**
+   * Performs the bfecc operation over a given element
+   * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
+   * weightA: weigth of the first  operator (A)
+   * weightB: weigth of the second operator (B)
+   * @i,j,k:  Index of the cell
+   **/ 
+  void ReverseApply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
+      const double &Sign, const double &WeightA, const double &WeightB,
+      const uint &i, const uint &j, const uint &k, double * Factors) {
+
+    uint cell = IndexType::GetIndex(pBlock,i,j,k);
+    
+    VariableType    iPhi;
+    Variable3DType  origin;
+    Variable3DType  displacement;
+
+    origin[0] = i * rDx;
+    origin[1] = j * rDx;
+    origin[2] = k * rDx;
+
+    for(int d = 0; d < 3; d++) {
+      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
+    }
+
+    InterpolateType::ReverseInterpolate(pBlock,PhiAuxB,&iPhi,displacement,Factors);
+
+    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
+  }
+
 
   /**
    * Performs the bfecc operation over a given element
@@ -173,54 +232,51 @@ public:
       const double &Sign, const double &WeightA, const double &WeightB,
       const uint &i, const uint &j, const uint &k) {
 
-    uint cell = IndexType::GetIndex(i,j,k,mBW,mX,mY,mZ);
+    uint cell = IndexType::GetIndex(pBlock,i,j,k);
     
-    Triple origin;
-    Triple displacement;
+    VariableType    iPhi;
+    Variable3DType  origin;
+    Variable3DType  displacement;
 
-    origin[0] = i * mDx;
-    origin[1] = j * mDx;
-    origin[2] = k * mDx;
-   
+    origin[0] = i * rDx;
+    origin[1] = j * rDx;
+    origin[2] = k * rDx;
+
     for(int d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * mpField[cell][d]*mDt;
+      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
     }
 
-    VariableType iPhi = Interpolate(displacement,PhiAuxB);
+    InterpolateType::Interpolate(pBlock,PhiAuxB,&iPhi,displacement);
 
     Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
   }
 
 private:
 
-  /**
-   * @phi:        Result of the operation
-   * @phi_auxA:   first  operator
-   * @phi_auxB:   second operator
-   * @field:      field
-   * @dx:         diferential of space
-   * @dt:         diferential of time
-   **/
+  double * pFactors;
+
+  BlockType * pBlock;
+
+  ResultType * pPhiA;
+  ResultType * pPhiB;
+  ResultType * pPhiC;
+
+  Variable3DType * pVelocity;
+
+  const double & rDx;
+  const double rIdx;
+  const double & rDt;
+
+  const uint & rBW;
+  const uint rBWP;
+
+  const uint & rX; 
+  const uint & rY; 
+  const uint & rZ;
+
+  const uint & rNB;
+  const uint & rNE;
    
-  VariableType   * mpPhi;
-  VariableType   * mpPhiAuxA;
-  VariableType   * mpPhiAuxB;
-
-  Variable3DType * mpField;
-
-  const double mDx;
-  const double mIdx;
-  const double mDt;
-
-  const uint mBW;
-  const uint mBWP;
-
-  const uint mX; 
-  const uint mY; 
-  const uint mZ;
-
-  const uint mNB;
-  const uint mNE;
 };
 
 // This does not belong here! put it in a class

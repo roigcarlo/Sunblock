@@ -1,17 +1,14 @@
 #include <sys/time.h>
 #include <sys/types.h>
 #include <omp.h>
-#include <math.h>
-
-#include <stdlib.h>
-#include <stdio.h>
-#include <errno.h>
 
 // Solver
+#include "include/utils.h"
+#include "include/block.h"
 #include "include/defines.h"
 #include "include/solvers.h"
 #include "include/file_io.h"
-#include "include/utils.h"
+#include "include/interpolator.h"
 
 const double PI = 3.14159265;
 
@@ -30,157 +27,16 @@ double CFL      =  2.0;
 double cellSize =  1.0;
 
 typedef Indexer IndexType;
-
-void GlobalToLocal(Triple coord, double f) { 
-  if(f==1.0) 
-    return; 
-  for(int d = 0; d < 3; d++) {
-    coord[d] *= f; 
-  }
-}
- 
-void LocalToGlobal(Triple coord, double f) { 
-  if(f==1.0) 
-    return;
-  for(int d = 0; d < 3; d++) { 
-    coord[d] *= f;
-  }
-}
-
-template <typename T>
-void Initialize(T * gridA, T * gridB, 
-    const uint &X, const uint &Y, const uint &Z) {
-
-  for(uint k = BWP; k < Z - BWP; k++) {
-    for(uint j = BWP; j < Y - BWP; j++) {
-      for(uint i = BWP; i < X - BWP; i++ ) {
-        gridA[IndexType::GetIndex(i,j,k,BW,X,Y,Z)] = 0.0;
-        gridB[IndexType::GetIndex(i,j,k,BW,X,Y,Z)] = 0.0;
-      }
-    }
-  }
-
-}
-
-void InitializeVelocity(Triple * field,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  for(uint k = 0; k < Z + BW; k++) {
-    for(uint j = 0; j < Y + BW; j++) {
-      for(uint i = 0; i < X + BW; i++) {
-        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][0] = 0.0;
-        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][1] = 0.0;
-        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][2] = 0.0;
-      } 
-    }
-  }
-
-  for(uint k = BWP; k < Z + BWP; k++) {
-    for(uint j = BWP; j < Y + BWP; j++) {
-      for(uint i = BWP; i < X + BWP; i++ ) {
-        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][0] = -omega * (double)(j-(Y+1.0)/2.0) * dx;
-        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][1] =  omega * (double)(i-(X+1.0)/2.0) * dx;
-        field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][2] =  0.0;
-
-        maxv = std::max((double)abs(field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][0]),maxv);
-        maxv = std::max((double)abs(field[IndexType::GetIndex(i,j,k,BW,X,Y,Z)][1]),maxv);
-      }
-    }
-  }
-
-}
-
-template <typename T>
-void WriteHeatFocus(T * gridA,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  uint Xc, Yc, Zc;
-
-  Xc = 2.0/5.0*(X);
-  Yc = 2.0/5.5*(Y);
-  Zc = 1.0/2.0*(Z);
-
-  for(uint k = 0; k < Z + BW; k++) {
-    for(uint j = 0; j < Y + BW; j++) {
-      for(uint i = 0; i < Z + BW; i++) {
-
-        double d2 = pow((Xc - (double)(i)),2) + pow((Yc - (double)(j)),2) + pow((Zc - (double)(k)),2); 
-        double rr = pow(X/6.0,2);  
-        
-        if(d2 < rr)
-          gridA[IndexType::GetIndex(i,j,k,BW,X,Y,Z)] = 1.0 - d2/rr;
-      }
-    }
-  }
-
-}
-
-void Interpolate(Triple prevDelta, Triple prevVeloc, Triple * field,
-    const uint &X, const uint &Y, const uint &Z) {
- 
-  uint pi,pj,pk,ni,nj,nk;
-
-  GlobalToLocal(prevDelta,idx);
-
-  pi = floor(prevDelta[0]); ni = pi+1;
-  pj = floor(prevDelta[1]); nj = pj+1;
-  pk = floor(prevDelta[2]); nk = pk+1;
-
-  PrecisionType Nx, Ny, Nz;
-
-  Nx = 1-(prevDelta[0] - floor(prevDelta[0]));
-  Ny = 1-(prevDelta[1] - floor(prevDelta[1]));
-  Nz = 1-(prevDelta[2] - floor(prevDelta[2]));
-
-  for(int d = 0; d < 3; d++) {
-    prevVeloc[d] = (
-      field[pk*(Z+BW)*(Y+BW)+pj*(Y+BW)+pi][d] * (    Nx) * (    Ny) * (    Nz) +
-      field[pk*(Z+BW)*(Y+BW)+pj*(Y+BW)+ni][d] * (1 - Nx) * (    Ny) * (    Nz) +
-      field[pk*(Z+BW)*(Y+BW)+nj*(Y+BW)+pi][d] * (    Nx) * (1 - Ny) * (    Nz) +
-      field[pk*(Z+BW)*(Y+BW)+nj*(Y+BW)+ni][d] * (1 - Nx) * (1 - Ny) * (    Nz) +
-      field[nk*(Z+BW)*(Y+BW)+pj*(Y+BW)+pi][d] * (    Nx) * (    Ny) * (1 - Nz) +
-      field[nk*(Z+BW)*(Y+BW)+pj*(Y+BW)+ni][d] * (1 - Nx) * (    Ny) * (1 - Nz) +
-      field[nk*(Z+BW)*(Y+BW)+nj*(Y+BW)+pi][d] * (    Nx) * (1 - Ny) * (1 - Nz) +
-      field[nk*(Z+BW)*(Y+BW)+nj*(Y+BW)+ni][d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
-    );
-  }
-}
-
-template <typename T>
-double Interpolate(Triple prevDelta, T * gridA,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  uint pi,pj,pk,ni,nj,nk;
-
-  GlobalToLocal(prevDelta,idx);
-
-  pi = floor(prevDelta[0]); ni = pi+1;
-  pj = floor(prevDelta[1]); nj = pj+1;
-  pk = floor(prevDelta[2]); nk = pk+1;
-
-  double Nx, Ny, Nz;
-
-  Nx = 1-(prevDelta[0] - floor(prevDelta[0]));
-  Ny = 1-(prevDelta[1] - floor(prevDelta[1]));
-  Nz = 1-(prevDelta[2] - floor(prevDelta[2]));
-
-  return (
-    gridA[pk*(Z+BW)*(Y+BW)+pj*(Y+BW)+pi] * (    Nx) * (    Ny) * (    Nz) +
-    gridA[pk*(Z+BW)*(Y+BW)+pj*(Y+BW)+ni] * (1 - Nx) * (    Ny) * (    Nz) +
-    gridA[pk*(Z+BW)*(Y+BW)+nj*(Y+BW)+pi] * (    Nx) * (1 - Ny) * (    Nz) +
-    gridA[pk*(Z+BW)*(Y+BW)+nj*(Y+BW)+ni] * (1 - Nx) * (1 - Ny) * (    Nz) +
-    gridA[nk*(Z+BW)*(Y+BW)+pj*(Y+BW)+pi] * (    Nx) * (    Ny) * (1 - Nz) +
-    gridA[nk*(Z+BW)*(Y+BW)+pj*(Y+BW)+ni] * (1 - Nx) * (    Ny) * (1 - Nz) +
-    gridA[nk*(Z+BW)*(Y+BW)+nj*(Y+BW)+pi] * (    Nx) * (1 - Ny) * (1 - Nz) +
-    gridA[nk*(Z+BW)*(Y+BW)+nj*(Y+BW)+ni] * (1 - Nx) * (1 - Ny) * (1 - Nz)
-  );
-}
+// typedef MortonIndexer IndexType;
+typedef Block<VariableType,IndexType> BlockType;
+typedef TrilinealInterpolator<VariableType,IndexType,BlockType>  InterpolateType;
+typedef BfeccSolver<VariableType,IndexType,BlockType,InterpolateType> BfeccSolverType;
 
 template <typename U>
 void precalculateBackAndForw(U * fieldA, U * backward, U * forward,
     const uint &X, const uint &Y, const uint &Z) {
 
-  Triple origin;
+  Variable3DType origin;
 
   for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
     for(uint j = BWP; j < Y + BWP; j++) {
@@ -222,22 +78,26 @@ int main(int argc, char *argv[]) {
   h           = atoi(argv[3]);
 
   NB          = atoi(argv[4]);
-  NE          = N/NB;
+  NE          = (N+BW)/NB;
 
   dx          = h/N;
   idx         = 1.0/dx;
 
   struct timeval start, end;
 
-  FileIO<PrecisionType> io("grid",N);
+  IndexType::PreCalculateIndexTable(N+BW);
 
-  PrecisionType * step0 = NULL;
-  PrecisionType * step1 = NULL;
-  PrecisionType * step2 = NULL;
+  FileIO<VariableType> io("grid",N);
 
-  Triple * velf0 = NULL;
-  Triple * velf1 = NULL;
-  Triple * velf2 = NULL;
+  BlockType * block = NULL;
+
+  VariableType * step0 = NULL;
+  VariableType * step1 = NULL;
+  VariableType * step2 = NULL;
+
+  Variable3DType * velf0 = NULL;
+  Variable3DType * velf1 = NULL;
+  Variable3DType * velf2 = NULL;
 
   double duration = 0.0;
 
@@ -254,17 +114,17 @@ int main(int argc, char *argv[]) {
   printf("Allocation correct\n");
   printf("Initialize\n");
 
-  Initialize(step0,step1,N,N,N);
-  WriteHeatFocus(step0,N,N,N);
-  InitializeVelocity(velf0,N,N,N);
+  block = new BlockType(step0,step1,step2,velf0,dx,dt,omega,BW,N,N,N,NB,NE);
+
+  block->InitializeVariable();
+  maxv = block->InitializeVelocity();
+  block->WriteHeatFocus();
 
   dt = 0.05; //0.25 * CFL*h/maxv;
 
   io.WriteGidMesh(step0,N,N,N);
 
-  typedef BfeccSolver<PrecisionType,Triple,Indexer>    BfeccSolverType;
-
-  BfeccSolverType AdvectonStep(step0,step1,step2,velf0,dx,dt,BW,N,N,N,NB,NE);
+  BfeccSolverType AdvectonStep(block);
   
   #pragma omp parallel
   #pragma omp single
@@ -284,7 +144,7 @@ int main(int argc, char *argv[]) {
       // {
       //   if(OutputStep == 0) {
       //     io.WriteGidResults(step0,N,N,N,i);
-      //     OutputStep = 10;
+      //     OutputStep = 20;
       //   }
       //   OutputStep--;
       // }
@@ -298,6 +158,8 @@ int main(int argc, char *argv[]) {
   printf("Total time:\t %f s\n",duration);
   printf("Step  time:\t %f s\n",duration/steeps);
 
+  free(block);
+
   ReleaseGrid(&step0);
   ReleaseGrid(&step1);
   ReleaseGrid(&step2);
@@ -306,5 +168,9 @@ int main(int argc, char *argv[]) {
   ReleaseGrid(&velf1);
   ReleaseGrid(&velf2);
 
+  IndexType::ReleaseIndexTable(N+BW);
+
   printf("De-Allocation correct\n");
+
+  return 0;
 }

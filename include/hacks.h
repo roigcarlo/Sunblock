@@ -1,3 +1,6 @@
+#ifndef BHACKS_H
+#define BHACKS_H
+
 // BitHacks and other shady things
 #include <sys/types.h>
 
@@ -46,3 +49,5 @@ uint interleave64(const uint &IX, const uint &IY, const uint &IZ) {
 
   return ( X | ( Y << 1 ) | ( Z << 2 ) ) & 0x0000FFFFFFFFFFFF; 
 }
+
+#endif

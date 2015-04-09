@@ -3,6 +3,8 @@
 #include <sstream>
 #include <fstream>
 
+#include "hacks.h"
+
 template <typename T>
 class FileIO {
 private:
@@ -179,9 +181,10 @@ public:
 
     for(uint k = 0; k < Z + BW; k++) {
       for(uint j = 0; j < Y + BW; j++) {
-        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
         for(uint i = 0; i < X + BW; i++) {
-          (*post_file) << cell << "  " << grid[cell-1] << std::endl; cell++;
+          uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+i;
+          uint cell = interleave64(i,j,k);
+          (*post_file) << celln << "  " << grid[cell] << std::endl; cell++;
         }
       }
     }
