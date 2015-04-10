@@ -39,9 +39,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = floor(Coords[0]);
-    pj = floor(Coords[1]);
-    pk = floor(Coords[2]);
+    pi = (uint)(Coords[0]);
+    pj = (uint)(Coords[1]);
+    pk = (uint)(Coords[2]);
 
     double Nx, Ny, Nz;
 
@@ -59,16 +59,6 @@ public:
     Factors[7] = (1 - Nx) * (1 - Ny) * (1 - Nz); 
   }
 
-  static void InvertFactors(double * Factors) {
-
-      double aux;
-
-      aux = Factors[0]; Factors[0] = Factors[7]; Factors[7] = aux;
-      aux = Factors[1]; Factors[1] = Factors[6]; Factors[6] = aux;
-      aux = Factors[2]; Factors[2] = Factors[5]; Factors[5] = aux;
-      aux = Factors[3]; Factors[3] = Factors[4]; Factors[4] = aux;
-  }
-
   static void Interpolate(
       BlockType * block,
       VariableType * OldPhi,
@@ -80,9 +70,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = floor(Coords[0]); ni = pi+1;
-    pj = floor(Coords[1]); nj = pj+1;
-    pk = floor(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]); ni = pi+1;
+    pj = (uint)(Coords[1]); nj = pj+1;
+    pk = (uint)(Coords[2]); nk = pk+1;
 
     double a = OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * Factors[0];
     double b = OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * Factors[1];
@@ -107,9 +97,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = floor(Coords[0]); ni = pi+1;
-    pj = floor(Coords[1]); nj = pj+1;
-    pk = floor(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]); ni = pi+1;
+    pj = (uint)(Coords[1]); nj = pj+1;
+    pk = (uint)(Coords[2]); nk = pk+1;
 
     double a = OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * Factors[3];
     double b = OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * Factors[2];
@@ -133,9 +123,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = floor(Coords[0]); ni = pi+1;
-    pj = floor(Coords[1]); nj = pj+1;
-    pk = floor(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]); ni = pi+1;
+    pj = (uint)(Coords[1]); nj = pj+1;
+    pk = (uint)(Coords[2]); nk = pk+1;
 
     double Nx, Ny, Nz;
 
@@ -143,16 +133,18 @@ public:
     Ny = 1-(Coords[1] - pj);
     Nz = 1-(Coords[2] - pk);
 
-    double a = OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * (    Nx) * (    Ny) * (    Nz);
-    double b = OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * (1 - Nx) * (    Ny) * (    Nz);
-    double c = OldPhi[IndexType::GetIndex(block,pi,nj,pk)] * (    Nx) * (1 - Ny) * (    Nz);
-    double d = OldPhi[IndexType::GetIndex(block,ni,nj,pk)] * (1 - Nx) * (1 - Ny) * (    Nz);
-    double e = OldPhi[IndexType::GetIndex(block,pi,pj,nk)] * (    Nx) * (    Ny) * (1 - Nz);
-    double f = OldPhi[IndexType::GetIndex(block,ni,pj,nk)] * (1 - Nx) * (    Ny) * (1 - Nz);
-    double g = OldPhi[IndexType::GetIndex(block,pi,nj,nk)] * (    Nx) * (1 - Ny) * (1 - Nz);
-    double h = OldPhi[IndexType::GetIndex(block,ni,nj,nk)] * (1 - Nx) * (1 - Ny) * (1 - Nz);
+    (*NewPhi) = 0.0;
 
-    (*NewPhi) = (a+b+c+d+e+f+g+h);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * (    Nx) * (    Ny) * (    Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * (1 - Nx) * (    Ny) * (    Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,nj,pk)] * (    Nx) * (1 - Ny) * (    Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,nj,pk)] * (1 - Nx) * (1 - Ny) * (    Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,pj,nk)] * (    Nx) * (    Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,pj,nk)] * (1 - Nx) * (    Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,nj,nk)] * (    Nx) * (1 - Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,nj,nk)] * (1 - Nx) * (1 - Ny) * (1 - Nz);
+
+    //(*NewPhi) = (a+b+c+d+e+f+g+h);
   }
 
   static void Interpolate(
@@ -165,15 +157,15 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = floor(Coords[0]); ni = pi+1;
-    pj = floor(Coords[1]); nj = pj+1;
-    pk = floor(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]); ni = pi+1;
+    pj = (uint)(Coords[1]); nj = pj+1;
+    pk = (uint)(Coords[2]); nk = pk+1;
 
     VariableType Nx, Ny, Nz;
 
-    Nx = 1-(Coords[0] - floor(Coords[0]));
-    Ny = 1-(Coords[1] - floor(Coords[1]));
-    Nz = 1-(Coords[2] - floor(Coords[2]));
+    Nx = 1-(Coords[0] - pi);
+    Ny = 1-(Coords[1] - pj);
+    Nz = 1-(Coords[2] - pk);
 
     for(int d = 0; d < 3; d++) {
       (*NewPhi)[d] = (
