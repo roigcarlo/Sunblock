@@ -33,6 +33,23 @@ public:
 
     mPaddZ = (rZ+rBW)*(rY+rBW);
     mPaddY = (rY+rBW);
+
+    //      F ------ G
+    //     /|       /|
+    //    / |      / |
+    //   B -+---- C  |
+    //   |  D ----+- E
+    //   | /      | /
+    //   |/       |/
+    //   0 ------ A
+
+    mPaddA = 1;
+    mPaddB = (rY+rBW);
+    mPaddC = (rY+rBW)+1;
+    mPaddD = (rZ+rBW)*(rY+rBW);
+    mPaddE = (rZ+rBW)*(rY+rBW) + 1;
+    mPaddF = (rZ+rBW)*(rY+rBW) + (rY+rBW);
+    mPaddG = (rZ+rBW)*(rY+rBW) + (rY+rBW) + 1;
   }
 
   ~Block() {}
@@ -132,6 +149,14 @@ public:
 
   uint mPaddZ;
   uint mPaddY;
+
+  uint mPaddA;
+  uint mPaddB;
+  uint mPaddC;
+  uint mPaddD;
+  uint mPaddE;
+  uint mPaddF;
+  uint mPaddG;
 
 private:
 

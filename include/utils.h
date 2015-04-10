@@ -71,7 +71,6 @@ public:
 };
 
 class MortonIndexer : Indexer {
-
 public:
 
   static uint * pIndexTable;
@@ -125,20 +124,15 @@ private:
   ~Utils() {}
 
 public:
+
   static void GlobalToLocal(Variable3DType coord, double f) { 
-    if(f==1.0) 
-      return; 
-    for(int d = 0; d < 3; d++) {
+    for(int d = 0; d < 3; d++)
       coord[d] *= f; 
-    }
   }
 
   static void LocalToGlobal(Variable3DType coord, double f) { 
-    if(f==1.0) 
-      return;
-    for(int d = 0; d < 3; d++) { 
-      coord[d] *= f;
-    }
+    for(int d = 0; d < 3; d++)
+      coord[d] /= f;
   }
 };
 

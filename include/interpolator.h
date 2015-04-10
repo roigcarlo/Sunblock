@@ -33,8 +33,6 @@ public:
       Variable3DType Coords,
       double * Factors) {
 
-    // printf("** %p\n",(void * )Factors);
-
     uint pi,pj,pk;
 
     Utils::GlobalToLocal(Coords,block->rIdx);
@@ -66,22 +64,24 @@ public:
       Variable3DType Coords,
       double * Factors) {
 
-    uint pi,pj,pk,ni,nj,nk;
+    uint pi,pj,pk;
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = (uint)(Coords[0]); ni = pi+1;
-    pj = (uint)(Coords[1]); nj = pj+1;
-    pk = (uint)(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]);
+    pj = (uint)(Coords[1]);
+    pk = (uint)(Coords[2]);
 
-    double a = OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * Factors[0];
-    double b = OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * Factors[1];
-    double c = OldPhi[IndexType::GetIndex(block,pi,nj,pk)] * Factors[2];
-    double d = OldPhi[IndexType::GetIndex(block,ni,nj,pk)] * Factors[3];
-    double e = OldPhi[IndexType::GetIndex(block,pi,pj,nk)] * Factors[4];
-    double f = OldPhi[IndexType::GetIndex(block,ni,pj,nk)] * Factors[5];
-    double g = OldPhi[IndexType::GetIndex(block,pi,nj,nk)] * Factors[6];
-    double h = OldPhi[IndexType::GetIndex(block,ni,nj,nk)] * Factors[7];
+    uint cellIndex = IndexType::GetIndex(block,pi,pj,pk);
+
+    double a = OldPhi[cellIndex                ] * Factors[0];
+    double b = OldPhi[cellIndex + block->mPaddA] * Factors[1];
+    double c = OldPhi[cellIndex + block->mPaddB] * Factors[2];
+    double d = OldPhi[cellIndex + block->mPaddC] * Factors[3];
+    double e = OldPhi[cellIndex + block->mPaddD] * Factors[4];
+    double f = OldPhi[cellIndex + block->mPaddE] * Factors[5];
+    double g = OldPhi[cellIndex + block->mPaddF] * Factors[6];
+    double h = OldPhi[cellIndex + block->mPaddG] * Factors[7];
 
     (*NewPhi) = (a+b+c+d+e+f+g+h);
   }
@@ -93,22 +93,24 @@ public:
       Variable3DType Coords,
       double * Factors) {
 
-    uint pi,pj,pk,ni,nj,nk;
+    uint pi,pj,pk;
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = (uint)(Coords[0]); ni = pi+1;
-    pj = (uint)(Coords[1]); nj = pj+1;
-    pk = (uint)(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]);
+    pj = (uint)(Coords[1]);
+    pk = (uint)(Coords[2]);
 
-    double a = OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * Factors[3];
-    double b = OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * Factors[2];
-    double c = OldPhi[IndexType::GetIndex(block,pi,nj,pk)] * Factors[1];
-    double d = OldPhi[IndexType::GetIndex(block,ni,nj,pk)] * Factors[0];
-    double e = OldPhi[IndexType::GetIndex(block,pi,pj,nk)] * Factors[7];
-    double f = OldPhi[IndexType::GetIndex(block,ni,pj,nk)] * Factors[6];
-    double g = OldPhi[IndexType::GetIndex(block,pi,nj,nk)] * Factors[5];
-    double h = OldPhi[IndexType::GetIndex(block,ni,nj,nk)] * Factors[4];
+    uint cellIndex = IndexType::GetIndex(block,pi,pj,pk);
+
+    double a = OldPhi[cellIndex                ] * Factors[3];
+    double b = OldPhi[cellIndex + block->mPaddA] * Factors[2];
+    double c = OldPhi[cellIndex + block->mPaddB] * Factors[1];
+    double d = OldPhi[cellIndex + block->mPaddC] * Factors[0];
+    double e = OldPhi[cellIndex + block->mPaddD] * Factors[7];
+    double f = OldPhi[cellIndex + block->mPaddE] * Factors[6];
+    double g = OldPhi[cellIndex + block->mPaddF] * Factors[5];
+    double h = OldPhi[cellIndex + block->mPaddG] * Factors[4];
 
     (*NewPhi) = (a+b+c+d+e+f+g+h);
   }
@@ -119,13 +121,13 @@ public:
       VariableType * NewPhi,
       Variable3DType Coords) {
 
-    uint pi,pj,pk,ni,nj,nk;
+    uint pi,pj,pk;
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = (uint)(Coords[0]); ni = pi+1;
-    pj = (uint)(Coords[1]); nj = pj+1;
-    pk = (uint)(Coords[2]); nk = pk+1;
+    pi = (uint)(Coords[0]);
+    pj = (uint)(Coords[1]);
+    pk = (uint)(Coords[2]);
 
     double Nx, Ny, Nz;
 
@@ -133,16 +135,18 @@ public:
     Ny = 1-(Coords[1] - pj);
     Nz = 1-(Coords[2] - pk);
 
+    uint cellIndex = IndexType::GetIndex(block,pi,pj,pk);
+
     (*NewPhi) = 0.0;
 
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,pj,pk)] * (    Nx) * (    Ny) * (    Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,pj,pk)] * (1 - Nx) * (    Ny) * (    Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,nj,pk)] * (    Nx) * (1 - Ny) * (    Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,nj,pk)] * (1 - Nx) * (1 - Ny) * (    Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,pj,nk)] * (    Nx) * (    Ny) * (1 - Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,pj,nk)] * (1 - Nx) * (    Ny) * (1 - Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,pi,nj,nk)] * (    Nx) * (1 - Ny) * (1 - Nz);
-    (*NewPhi) += OldPhi[IndexType::GetIndex(block,ni,nj,nk)] * (1 - Nx) * (1 - Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[cellIndex                ] * (    Nx) * (    Ny) * (    Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddA] * (1 - Nx) * (    Ny) * (    Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddB] * (    Nx) * (1 - Ny) * (    Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddC] * (1 - Nx) * (1 - Ny) * (    Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddD] * (    Nx) * (    Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddE] * (1 - Nx) * (    Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddF] * (    Nx) * (1 - Ny) * (1 - Nz);
+    (*NewPhi) += OldPhi[cellIndex + block->mPaddG] * (1 - Nx) * (1 - Ny) * (1 - Nz);
 
     //(*NewPhi) = (a+b+c+d+e+f+g+h);
   }
