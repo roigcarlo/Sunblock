@@ -183,7 +183,7 @@ public:
       for(uint j = 0; j < Y + BW; j++) {
         for(uint i = 0; i < X + BW; i++) {
           uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+i;
-          uint cell = interleave64(i,j,k);
+          uint cell = celln; //interleave64(i,j,k);
           (*post_file) << celln << "  " << grid[cell] << std::endl; cell++;
         }
       }
