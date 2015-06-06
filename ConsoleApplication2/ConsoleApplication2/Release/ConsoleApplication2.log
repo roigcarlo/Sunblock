@@ -1,0 +1,13 @@
+﻿Build started 04/06/2015 9:23:54.
+     1>Project "C:\Users\roigcarlo\Documents\GitHub\sunblock\ConsoleApplication2\ConsoleApplication2\ConsoleApplication2.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oi /Oy- /GL /D WIN32 /D NDEBUG /D _CONSOLE /D _LIB /D _UNICODE /D UNICODE /Gm- /EHsc /MD /GS /Gy /fp:precise /Zc:wchar_t /Zc:forScope /openmp /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt ..\..\bfecc.cpp
+         bfecc.cpp
+     1>c:\users\roigcarlo\documents\github\sunblock\include/solvers.h(90): error C2144: syntax error : 'void' should be preceded by ';'
+                 c:\users\roigcarlo\documents\github\sunblock\include/solvers.h(307) : see reference to class template instantiation 'BfeccSolver<ResultType,IndexType,BlockType,InterpolateType>' being compiled
+     1>c:\users\roigcarlo\documents\github\sunblock\include/solvers.h(90): error C4430: missing type specifier - int assumed. Note: C++ does not support default-int
+     1>Done Building Project "C:\Users\roigcarlo\Documents\GitHub\sunblock\ConsoleApplication2\ConsoleApplication2\ConsoleApplication2.vcxproj" (Build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:00.36
