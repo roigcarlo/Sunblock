@@ -32,9 +32,23 @@ void AllocateGrid(T * grid,
 }
 
 template <typename T>
+void AllocateGridCUDA(T ** grid,
+	const uint &X, const uint &Y, const uint &Z) {
+
+  uint size = (X + BW) * (Y + BW) * (Z + BW);
+  cudaMallocHost((void**)grid, sizeof(T) * size);
+}
+
+template <typename T>
 void ReleaseGrid(T * grid) {
 
   free(*grid);
+}
+
+template <typename T>
+void ReleaseGridCUDA(T * grid) {
+
+	cudaFreeHost(*grid);
 }
 
 template <typename T>

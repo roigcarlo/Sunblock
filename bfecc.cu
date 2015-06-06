@@ -109,14 +109,14 @@ int main(int argc, char *argv[]) {
   double duration = 0.0;
 
   // Temperature
-  AllocateGrid(&step0,N,N,N);
-  AllocateGrid(&step1,N,N,N);
-  AllocateGrid(&step2,N,N,N);
+  AllocateGridCUDA(&step0, N, N, N);
+  AllocateGridCUDA(&step1, N, N, N);
+  AllocateGridCUDA(&step2, N, N, N);
 
   // Velocity
-  AllocateGrid(&velf0,N,N,N);
-  AllocateGrid(&velf1,N,N,N);
-  AllocateGrid(&velf2,N,N,N);
+  AllocateGridCUDA(&velf0, N, N, N);
+  AllocateGridCUDA(&velf1, N, N, N);
+  AllocateGridCUDA(&velf2, N, N, N);
 
   printf("Allocation correct\n");
   printf("Initialize\n");
@@ -127,13 +127,13 @@ int main(int argc, char *argv[]) {
   maxv = block->InitializeVelocity();
   block->WriteHeatFocus();
 
-  dt = 0.00018;// *CFL*h / maxv;
+  dt = 0.0018;// *CFL*h / maxv;
 
   printf("CFL: %f \t Dt: %f\n", CFL, dt);
 
-  io.WriteGidMesh(step0,N,N,N);
-  io.WriteGidResults(step0, N, N, N, 0);
-  OutputStep = 1;
+  //io.WriteGidMesh(step0,N,N,N);
+  //io.WriteGidResults(step0, N, N, N, 0);
+  //OutputStep = 1;
   
   BfeccSolverType AdvectonStep(block);
   
@@ -151,26 +151,36 @@ int main(int argc, char *argv[]) {
   start = GetTickCount(); // At Program Start
 #endif
 
-  AdvectonStep.PrepareCUDA();
+  int test = 0;
 
-  //#pragma omp parallel
-  //{ 
-    for(int i = 0; i < steeps; i++) {
-      AdvectonStep.ExecuteCUDA();
-	  // printf("Step: %d\n",i);
-	  // AdvectonStep.Execute();
-      //#pragma omp single
-      //{
-         if(OutputStep == 0) {
-          io.WriteGidResults(step0,N,N,N,i);
-          OutputStep = 1;
-        }
-        OutputStep--;
-      //}
-    }
-  //}
-
-  AdvectonStep.FinishCUDA();
+  if (test == 0) {
+	AdvectonStep.PrepareCUDA();
+	for (int i = 0; i < steeps; i++) {
+		AdvectonStep.ExecuteCUDA();
+		//if (OutputStep == 0) {
+		//io.WriteGidResults(step0,N,N,N,i);
+		//OutputStep = 200;
+		//}
+		//OutputStep--;
+	}
+	AdvectonStep.FinishCUDA();
+	cudaDeviceReset();
+  } else {
+	#pragma omp parallel
+	{
+		for (int i = 0; i < steeps; i++) {
+			AdvectonStep.Execute();
+			#pragma omp single
+			{
+				if (OutputStep == 0) {
+					io.WriteGidResults(step0,N,N,N,i);
+					OutputStep = 200;
+				}
+				OutputStep--;
+			}
+		}
+	}
+  }
 
 #ifndef _WIN32
   gettimeofday(&end, NULL);
@@ -186,13 +196,13 @@ int main(int argc, char *argv[]) {
 
   free(block);
 
-  ReleaseGrid(&step0);
-  ReleaseGrid(&step1);
-  ReleaseGrid(&step2);
+  ReleaseGridCUDA(&step0);
+  ReleaseGridCUDA(&step1);
+  ReleaseGridCUDA(&step2);
 
-  ReleaseGrid(&velf0);
-  ReleaseGrid(&velf1);
-  ReleaseGrid(&velf2);
+  ReleaseGridCUDA(&velf0);
+  ReleaseGridCUDA(&velf1);
+  ReleaseGridCUDA(&velf2);
 
   IndexType::ReleaseIndexTable(N+BW);
 

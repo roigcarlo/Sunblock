@@ -8,8 +8,8 @@
 #include "block.h"
 
 #define TILE_X 8
-#define TILE_Y 4
-#define TILE_Z 4
+#define TILE_Y 8
+#define TILE_Z 8
 #define TE     2
 
 #define __GETINDEX(_i,_j,_k) (_k)*N*N + (_j)*N + (_i)
@@ -70,84 +70,6 @@ __global__ void ApplyCUDA(
 
 		out[index] = WeightA * PhiAuxA[index] + WeightB * itp[0];
 	}
-}
-
-void __device__ InterpolateSharedCUDA(double * Coords, double sh_in[TILE_X + TE][TILE_Y + TE][TILE_Z + TE], double * out, double dx, int N, int index) {
-	int pi, pj, pk, ni, nj, nk;
-
-	for (int d = 0; d < 3; d++)
-		Coords[d] *= (1 / dx);
-
-	pi = ((int)floor(Coords[0])); ni = pi + 1;
-	pj = ((int)floor(Coords[1])); nj = pj + 1;
-	pk = ((int)floor(Coords[2])); nk = pk + 1;
-
-	double Nx, Ny, Nz;
-
-	Nx = 1 - (Coords[0] - pi);
-	Ny = 1 - (Coords[1] - pj);
-	Nz = 1 - (Coords[2] - pk);
-
-	pi = ((int)floor(Coords[0]) % TILE_X) + 1; ni = pi + 1;
-	pj = ((int)floor(Coords[1]) % TILE_Y) + 1; nj = pj + 1;
-	pk = ((int)floor(Coords[2]) % TILE_Z) + 1; nk = pk + 1;
-
-	double a = sh_in[pi][pj][pk] * (Nx)* (Ny)* (Nz);
-	double b = sh_in[ni][pj][pk] * (1 - Nx) * (Ny)* (Nz);
-	double c = sh_in[pi][nj][pk] * (Nx)* (1 - Ny) * (Nz);
-	double d = sh_in[ni][nj][pk] * (1 - Nx) * (1 - Ny) * (Nz);
-	double e = sh_in[pi][pj][nk] * (Nx)* (Ny)* (1 - Nz);
-	double f = sh_in[ni][pj][nk] * (1 - Nx) * (Ny)* (1 - Nz);
-	double g = sh_in[pi][nj][nk] * (Nx)* (1 - Ny) * (1 - Nz);
-	double h = sh_in[ni][nj][nk] * (1 - Nx) * (1 - Ny) * (1 - Nz);
-
-	out[0] = (a + b + c + d + e + f + g + h);
-}
-
-__global__ void ApplySharedCUDA(
-	double * out,
-	double * PhiAuxA, double * PhiAuxB, double * vel,
-	const double Sign, const double WeightA, const double WeightB,
-	const double dx, const double dt, const int N,
-	const int ii, const int jj, const int kk) {
-
-	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
-	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
-	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
-
-	double org[3], dsp[3], itp[1];
-
-	__shared__ double sh_in[TILE_X + TE][TILE_Y + TE][TILE_Z + TE];
-
-	// sh_in[0][threadIdx.x][threadIdx.y][threadIdx.z] = PhiAuxA[__GETINDEX(i,j,k)];
-	sh_in[threadIdx.x + 1][threadIdx.y + 1][threadIdx.z + 1] = PhiAuxB[__GETINDEX(i, j, k)];  // Current
-	
-	sh_in[threadIdx.x + 0][threadIdx.y + 1][threadIdx.z + 1] = PhiAuxB[__GETINDEX(max(0    , i - 1), j, k)];  // Left
-	sh_in[threadIdx.x + 2][threadIdx.y + 1][threadIdx.z + 1] = PhiAuxB[__GETINDEX(min(N - 1, i + 1), j, k)];  // Right
-	sh_in[threadIdx.x + 1][threadIdx.y + 0][threadIdx.z + 1] = PhiAuxB[__GETINDEX(i, max(0    , j - 1), k)];  // Top
-	sh_in[threadIdx.x + 1][threadIdx.y + 2][threadIdx.z + 1] = PhiAuxB[__GETINDEX(i, min(N - 1, j + 1), k)];  // Bott
-	sh_in[threadIdx.x + 1][threadIdx.y + 1][threadIdx.z + 0] = PhiAuxB[__GETINDEX(i, j, max(0    , k - 1))];  // Front
-	sh_in[threadIdx.x + 1][threadIdx.y + 1][threadIdx.z + 2] = PhiAuxB[__GETINDEX(i, j, max(N - 1, k + 1))];  // Back
-	
-	__syncthreads();
-
-	double tmp;
-
-	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
-		org[0] = i * dx; org[1] = j * dx; org[2] = k * dx;
-
-		for (int d = 0; d < 3; d++) {
-			dsp[d] = org[d] + Sign * vel[__GETINDEX(i, j, k) * 3 + d] * dt;
-		}
-
-		InterpolateSharedCUDA(dsp, sh_in, itp, dx, N, __GETINDEX(i, j, k));
-
-		tmp = WeightA * PhiAuxA[__GETINDEX(i, j, k)] + WeightB * itp[0];
-	}
-
-	__syncthreads();
-
-	out[__GETINDEX(i, j, k)] = tmp;
 }
 
 template <
@@ -260,8 +182,16 @@ public:
 
 	cudaError err = cudaGetLastError();
 
-	int BBK = 8;
+	int BBK = 1;
 	int ELE = (rX + rBW) / BBK;
+
+	//printf("Execution info:\n");
+	//printf("SIZE:\t %d\n",rX + rBW);
+	//printf("H-BLOCK:\t %d\n", BBK);
+	//printf("H-BLOCK-NUM:\t %d\n", (rX + rBW)/BBK);
+	//printf("H-BLOCK-SIZE:\t %d\n", ELE);
+	//printf("SHMEM p.BLOCK:\t %d\n", (rX + rBW) / BBK * (rX + rBW) / BBK * (rX + rBW) / BBK * sizeof(double));
+	//printf("-------------------------\n");
 
 	dim3 threads(TILE_X, TILE_Y, TILE_Z);
 	dim3 blocks(ELE / TILE_X, ELE / TILE_Y, ELE / TILE_Z);
@@ -274,33 +204,46 @@ public:
 
 	// printf("Executing with CUDA... BLOCKS: %d, THREADS: %d\n", blocks.x, threads.x);
 
-	cudaFuncSetCacheConfig(ApplySharedCUDA, cudaFuncCachePreferShared);
+	cudaFuncSetCacheConfig(ApplyCUDA, cudaFuncCachePreferL1 );
+	/*
+	int i = 3; int j = 2; int k = 4;
 
 	for (int i = 0; i < BBK; i++)
 	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++) {
-		  ApplyCUDA<<< threads, blocks >>>(d_PhiB, d_PhiA, d_PhiA, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
-	}
+		for (int k = 0; k < BBK; k++)
+		  ApplySharedCUDA<<< threads, blocks >>>(d_PhiB, d_PhiA, d_PhiA, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
 
 	cudaDeviceSynchronize();
 
 	for (int i = 0; i < BBK; i++)
 	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++) {
-		  ApplyCUDA<<< threads, blocks >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, 1.0, 1.5, -0.5, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
-	}
+		for (int k = 0; k < BBK; k++)
+		  ApplySharedCUDA<<< threads, blocks >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, 1.0, 1.5, -0.5, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
 
 	cudaDeviceSynchronize();
 
 	for (int i = 0; i < BBK; i++)
 	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++) {
-		  ApplyCUDA<<< threads, blocks >>>(d_PhiA, d_PhiA, d_PhiC, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
-	}
+		for (int k = 0; k < BBK; k++)
+		  ApplySharedCUDA<<< threads, blocks >>>(d_PhiA, d_PhiA, d_PhiC, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
 
-	// ApplyCUDA<<< threads, blocks >>>(d_PhiB, d_PhiA, d_PhiA, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX+rBW);
-	// ApplyCUDA<<< threads, blocks >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, 1.0, 1.5, -0.5, rDx, rDt, rX+rBW);
-	// ApplyCUDA<<< threads, blocks >>>(d_PhiA, d_PhiA, d_PhiC, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX+rBW);
+	cudaDeviceSynchronize();*/
+	
+	for (int i = 0; i < BBK; i++)
+	  for (int j = 0; j < BBK; j++)
+		for (int k = 0; k < BBK; k++)
+		  ApplyCUDA << < threads, blocks >> >(d_PhiB, d_PhiA, d_PhiA, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE, k * ELE);
+	for (int i = 0; i < BBK; i++)
+	  for (int j = 0; j < BBK; j++)
+		for (int k = 0; k < BBK; k++)
+		  ApplyCUDA << < threads, blocks >> >(d_PhiC, d_PhiA, d_PhiB, d_vel, 1.0, 1.5, -0.5, rDx, rDt, rX + rBW, i * ELE, j * ELE, k * ELE);
+	for (int i = 0; i < BBK; i++)
+	  for (int j = 0; j < BBK; j++)
+		for (int k = 0; k < BBK; k++)
+		  ApplyCUDA << < threads, blocks >> >(d_PhiA, d_PhiA, d_PhiC, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE, k * ELE);
+	cudaDeviceSynchronize();
+	
+
 	if (cudaSuccess != err)
 	{
 		fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
