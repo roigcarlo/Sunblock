@@ -146,8 +146,8 @@ public:
     (*mesh_file) << "Elements" << std::endl;
     (*mesh_file) << "# Element node_1 node_2 node_3 node_4 node_5 node_6 node_7 node_8" << std::endl;
 
-    for(uint k = BWP; k < Z + BWP-1; k++) {
-      for(uint j = BWP; j < Y + BWP-1; j++) {
+    for(uint k = BWP; k < Z + BWP; k++) {
+      for(uint j = BWP; j < Y + BWP; j++) {
         uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
         for(uint i = BWP; i < X + BWP; i++) {
           (*mesh_file) << cell++ << " ";

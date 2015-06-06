@@ -9,16 +9,17 @@
 #include <errno.h>
 #include <math.h>
 
-
 #ifdef _WIN32
 typedef unsigned int uint;
 #endif
 
 #define FETCHTIME ((end.tv_sec  - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
 
-#ifdef USE_NOVEC
-  typedef double  VariableType;
-  const uint BW            = 2;        //  Boundary width   ( needed if we want to use SIMD )
+#ifndef USE_DOUBLE
+#ifndef USE_FLOAT
+typedef double  VariableType;
+const uint BW            = 2;        //  Boundary width   ( needed if we want to use SIMD )
+#endif
 #endif
 
 #ifdef USE_DOUBLE

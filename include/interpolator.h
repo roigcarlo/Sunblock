@@ -133,9 +133,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = floor(Coords[0]); ni = pi+1;
-    pj = floor(Coords[1]); nj = pj+1;
-    pk = floor(Coords[2]); nk = pk+1;
+    pi = (uint)floor(Coords[0]); ni = pi+1;
+	pj = (uint)floor(Coords[1]); nj = pj + 1;
+	pk = (uint)floor(Coords[2]); nk = pk + 1;
 
     double Nx, Ny, Nz;
 
