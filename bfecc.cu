@@ -133,7 +133,7 @@ int main(int argc, char *argv[]) {
 
   //io.WriteGidMesh(step0,N,N,N);
   //io.WriteGidResults(step0, N, N, N, 0);
-  //OutputStep = 1;
+  //OutputStep = 200;
   
   BfeccSolverType AdvectonStep(block);
   

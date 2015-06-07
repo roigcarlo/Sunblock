@@ -7,14 +7,14 @@
 #include "utils.h"
 #include "block.h"
 
-#define TILE_X 8
-#define TILE_Y 8
-#define TILE_Z 8
+#define TILE_X 16
+#define TILE_Y 16
+#define TILE_Z 16
 #define TE     2
 
-#define __GETINDEX(_i,_j,_k) (_k)*N*N + (_j)*N + (_i)
+#define __GETINDEX(_i,_j,_k) ((_k)*N*N + (_j)*N + (_i))
 
-void __device__ InterpolateCUDA(double * Coords, double * in, double * out, double dx, int N, int index) {
+void __device__ InterpolateCUDA(double * Coords, double * in, double * out, const double &dx, const int &N) {
 	int pi, pj, pk, ni, nj, nk;
 
 	for (int d = 0; d < 3; d++)
@@ -42,10 +42,8 @@ void __device__ InterpolateCUDA(double * Coords, double * in, double * out, doub
 	out[0] = (a + b + c + d + e + f + g + h);
 }
 
-__global__ void ApplyCUDA(
-	double * out, 
-	double * PhiAuxA, double * PhiAuxB, double * vel,
-	const double Sign, const double WeightA, const double WeightB, 
+__global__ void prebCUDA(
+	double * in, double * out,
 	const double dx, const double dt, const int N,
 	const int ii, const int jj, const int kk) {
 
@@ -53,22 +51,90 @@ __global__ void ApplyCUDA(
 	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
 	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
 
-	int index = k*N*N + j*N + i;
+	out[0] = (i * dx) - in[__GETINDEX(i, j, k) * 3 + 0] * dt;
+	out[1] = (j * dx) - in[__GETINDEX(i, j, k) * 3 + 1] * dt;
+	out[2] = (k * dx) - in[__GETINDEX(i, j, k) * 3 + 2] * dt;
+}
 
-	double org[3], dsp[3], itp[1];
+__global__ void prefCUDA(
+	double * in, double * out,
+	const double dx, const double dt, const int N,
+	const int ii, const int jj, const int kk) {
+
+	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
+	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
+	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
+
+	out[0] = (i * dx) + in[__GETINDEX(i, j, k) * 3 + 0] * dt;
+	out[1] = (j * dx) + in[__GETINDEX(i, j, k) * 3 + 1] * dt;
+	out[2] = (k * dx) + in[__GETINDEX(i, j, k) * 3 + 2] * dt;
+}
+
+__global__ void BackCUDA(
+	double * out, 
+	double * PhiAux, double * vel,
+	const double dx, const double dt, const int N,
+	const int ii, const int jj, const int kk) {
+
+	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
+	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
+	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
+
+	double dsp[3];
 
 	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
-		org[0] = i * dx;
-		org[1] = j * dx;
-		org[2] = k * dx;
 
-		for (int d = 0; d < 3; d++) {
-			dsp[d] = org[d] + Sign * vel[index*3+d] * dt;
-		}
+		dsp[0] = (i * dx) - vel[__GETINDEX(i, j, k) * 3 + 0] * dt;
+		dsp[1] = (j * dx) - vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
+		dsp[2] = (k * dx) - vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
 
-		InterpolateCUDA(dsp, PhiAuxB, itp, dx, N, index);
+		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], dx, N);
+	}
+}
 
-		out[index] = WeightA * PhiAuxA[index] + WeightB * itp[0];
+__global__ void ForthCUDA(
+	double * out,
+	double * PhiAuxA, double * PhiAuxB, double * vel,
+	const double dx, const double dt, const int N,
+	const int ii, const int jj, const int kk) {
+
+	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
+	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
+	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
+
+	double dsp[3], itp;
+
+	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
+
+		dsp[0] = (i * dx) + vel[__GETINDEX(i, j, k) * 3 + 0] * dt;
+		dsp[1] = (j * dx) + vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
+		dsp[2] = (k * dx) + vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
+
+		InterpolateCUDA(dsp, PhiAuxB, &itp, dx, N);
+
+		out[__GETINDEX(i, j, k)] = 1.5 * PhiAuxA[__GETINDEX(i, j, k)] - 0.5 * itp;
+	}
+}
+
+__global__ void EccCUDA(
+	double * out,
+	double * PhiAux, double * vel,
+	const double dx, const double dt, const int N,
+	const int ii, const int jj, const int kk) {
+
+	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
+	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
+	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
+
+	double dsp[3];
+
+	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
+
+		dsp[0] = (i * dx) - vel[__GETINDEX(i, j, k) * 3 + 0] * dt;
+		dsp[1] = (j * dx) - vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
+		dsp[2] = (k * dx) - vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
+
+		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], dx, N);
 	}
 }
 
@@ -163,7 +229,13 @@ public:
 	  cudaMalloc((void**)&d_PhiA, num_bytes * sizeof(double));
 	  cudaMalloc((void**)&d_PhiB, num_bytes * sizeof(double));
 	  cudaMalloc((void**)&d_PhiC, num_bytes * sizeof(double));
-	  cudaMalloc((void**)&d_vel, num_bytes * sizeof(double) * 3);
+	  cudaMalloc((void**)&d_vel,  num_bytes * sizeof(double) * 3);
+
+	  cudaStreamCreate(&stream0);
+	  cudaStreamCreate(&stream1);
+
+	  cudaMemset(d_PhiB, 0, num_bytes * sizeof(double));
+	  cudaMemset(d_PhiC, 0, num_bytes * sizeof(double));
   }
 
   virtual void FinishCUDA() {
@@ -171,6 +243,9 @@ public:
 	  cudaFree(d_PhiB);
 	  cudaFree(d_PhiC);
 	  cudaFree(d_vel);
+
+	  cudaStreamDestroy(stream0);
+	  cudaStreamDestroy(stream1);
   }
 
   /**
@@ -182,67 +257,80 @@ public:
 
 	cudaError err = cudaGetLastError();
 
-	int BBK = 1;
-	int ELE = (rX + rBW) / BBK;
+	const int BBX = 1;
+	const int BBY = 1;
+	const int BBZ = 8;
 
-	//printf("Execution info:\n");
-	//printf("SIZE:\t %d\n",rX + rBW);
-	//printf("H-BLOCK:\t %d\n", BBK);
-	//printf("H-BLOCK-NUM:\t %d\n", (rX + rBW)/BBK);
-	//printf("H-BLOCK-SIZE:\t %d\n", ELE);
-	//printf("SHMEM p.BLOCK:\t %d\n", (rX + rBW) / BBK * (rX + rBW) / BBK * (rX + rBW) / BBK * sizeof(double));
-	//printf("-------------------------\n");
+	int ELX = (rX + rBW) / BBX;
+	int ELY = (rX + rBW) / BBY;
+	int ELZ = (rX + rBW) / BBZ;
 
 	dim3 threads(TILE_X, TILE_Y, TILE_Z);
-	dim3 blocks(ELE / TILE_X, ELE / TILE_Y, ELE / TILE_Z);
+	dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
 
-	cudaMemset(d_PhiB, 0, num_bytes * sizeof(double));
-	cudaMemset(d_PhiC, 0, num_bytes * sizeof(double));
+	dim3 threads_full(TILE_X, TILE_Y, TILE_Z);
+	dim3 blocks_full((rX + rBW) / TILE_X, (rX + rBW) / TILE_Y, (rX + rBW) / TILE_Z);
 
-	cudaMemcpy(d_PhiA, pPhiA, num_bytes * sizeof(double), cudaMemcpyHostToDevice);
-	cudaMemcpy(d_vel, pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice);
+	int chunk_size = num_bytes / BBZ;
 
-	// printf("Executing with CUDA... BLOCKS: %d, THREADS: %d\n", blocks.x, threads.x);
+	// Streamlined code
+	cudaStream_t dstream1[BBZ];
 
-	cudaFuncSetCacheConfig(ApplyCUDA, cudaFuncCachePreferL1 );
+	for (int c = 0; c < BBZ; c++) {
+		cudaStreamCreate(&dstream1[c]);
+	}
+
+	ResultType     * itr_phi = pPhiA;
+	double         * d_itr_phi = d_PhiA;
+
+	Variable3DType * itr_vel = pVelocity;
+	double         * d_itr_vel = d_vel;
+
+	cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[0]);
+	cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double)    , cudaMemcpyHostToDevice, dstream1[0]);
+
+	for (int c = 1; c < BBZ; c++) {
+
+		itr_phi   += chunk_size;
+		d_itr_phi += chunk_size;
+		itr_vel   += chunk_size;
+		d_itr_vel += (chunk_size * 3);
+
+		cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[c]);
+		cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double), cudaMemcpyHostToDevice, dstream1[c]);
+
+		BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
+	}
+
+	BackCUDA <<< threads     , blocks     , 0, dstream1[(BBZ-1)] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (BBZ - 1) * ELZ);
+	ForthCUDA<<< threads_full, blocks_full, 0, dstream1[(BBZ-1)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, 0 * ELZ);
+	EccCUDA  <<< threads_full, blocks_full, 0, dstream1[(BBZ-1)] >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, 0 * ELZ);
+
+	for (int c = 0; c < BBZ; c++) {
+		cudaStreamDestroy(dstream1[c]);
+	}
+
 	/*
-	int i = 3; int j = 2; int k = 4;
+	// end of the streamlined code
 
-	for (int i = 0; i < BBK; i++)
-	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++)
-		  ApplySharedCUDA<<< threads, blocks >>>(d_PhiB, d_PhiA, d_PhiA, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
+	cudaMemcpyAsync(d_vel, pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice, stream0);
+	cudaMemcpyAsync(d_PhiA, pPhiA, num_bytes * sizeof(double), cudaMemcpyHostToDevice, stream0);
 
-	cudaDeviceSynchronize();
+	for (int i = 0; i < BBX; i++)
+	  for (int j = 0; j < BBY; j++)
+		for (int k = 0; k < BBZ; k++)
+		  BackCUDA <<< threads, blocks, 0, stream0 >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
-	for (int i = 0; i < BBK; i++)
-	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++)
-		  ApplySharedCUDA<<< threads, blocks >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, 1.0, 1.5, -0.5, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
+	for (int i = 0; i < BBX; i++)
+	  for (int j = 0; j < BBY; j++)
+		for (int k = 0; k < BBZ; k++)
+		  ForthCUDA<<< threads, blocks, 0, stream0 >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
-	cudaDeviceSynchronize();
-
-	for (int i = 0; i < BBK; i++)
-	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++)
-		  ApplySharedCUDA<<< threads, blocks >>>(d_PhiA, d_PhiA, d_PhiC, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE , k * ELE);
-
-	cudaDeviceSynchronize();*/
-	
-	for (int i = 0; i < BBK; i++)
-	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++)
-		  ApplyCUDA << < threads, blocks >> >(d_PhiB, d_PhiA, d_PhiA, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE, k * ELE);
-	for (int i = 0; i < BBK; i++)
-	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++)
-		  ApplyCUDA << < threads, blocks >> >(d_PhiC, d_PhiA, d_PhiB, d_vel, 1.0, 1.5, -0.5, rDx, rDt, rX + rBW, i * ELE, j * ELE, k * ELE);
-	for (int i = 0; i < BBK; i++)
-	  for (int j = 0; j < BBK; j++)
-		for (int k = 0; k < BBK; k++)
-		  ApplyCUDA << < threads, blocks >> >(d_PhiA, d_PhiA, d_PhiC, d_vel, -1.0, 0.0, 1.0, rDx, rDt, rX + rBW, i * ELE, j * ELE, k * ELE);
-	cudaDeviceSynchronize();
-	
+	for (int i = 0; i < BBX; i++)
+	  for (int j = 0; j < BBY; j++)
+		for (int k = 0; k < BBZ; k++)
+		  EccCUDA  <<< threads, blocks, 0, stream0 >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
+	*/
 
 	if (cudaSuccess != err)
 	{
@@ -431,6 +519,9 @@ private:
   double * d_PhiB = 0;
   double * d_PhiC = 0;
   double * d_vel = 0;
+
+  cudaStream_t stream0;
+  cudaStream_t stream1;
 
   Variable3DType * pVelocity;
 
