@@ -1,16 +1,20 @@
-#include "cuda_runtime.h"
-#include "device_launch_parameters.h"
-
 #include <sys/types.h>
 
 #include "defines.h"
 #include "utils.h"
 #include "block.h"
 
+#include "cuda_runtime.h"
+#include "device_launch_parameters.h"
+
 #define TILE_X 16
 #define TILE_Y 16
-#define TILE_Z 8
+#define TILE_Z 4
 #define TE     2
+
+#define BBX 1
+#define BBY 1
+#define BBZ 16
 
 #define __GETINDEX(_i,_j,_k) ((_k)*N*N + (_j)*N + (_i))
 
@@ -26,9 +30,9 @@ void __device__ InterpolateCUDA(double * Coords, double * in, double * out, cons
 
 	double Nx, Ny, Nz;
 
-	Nx = 1 - (Coords[0] - pi);
-	Ny = 1 - (Coords[1] - pj);
-	Nz = 1 - (Coords[2] - pk);
+	Nx = ni - Coords[0];
+	Ny = nj - Coords[1];
+	Nz = nk - Coords[2];
 
 	double a = in[__GETINDEX(pi, pj, pk)] * (Nx)* (Ny)* (Nz);
 	double b = in[__GETINDEX(ni, pj, pk)] * (1 - Nx) * (Ny)* (Nz);
@@ -56,9 +60,9 @@ __global__ void BackCUDA(
 
 	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
 
-		dsp[0] = (i * dx) - vel[__GETINDEX(i, j, k) * 3 + 0] * dt;
-		dsp[1] = (j * dx) - vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
-		dsp[2] = (k * dx) - vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
+		dsp[0] = fma((double)i, (double)dx, (double)(-vel[__GETINDEX(i, j, k) * 3 + 0] * dt));
+		dsp[1] = fma((double)j, (double)dx, (double)(-vel[__GETINDEX(i, j, k) * 3 + 1] * dt));
+		dsp[2] = fma((double)k, (double)dx, (double)(-vel[__GETINDEX(i, j, k) * 3 + 2] * dt));
 
 		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], idx, N);
 	}
@@ -78,9 +82,9 @@ __global__ void ForthCUDA(
 
 	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
 
-		dsp[0] = (i * dx) + vel[__GETINDEX(i, j, k) * 3 + 0] * dt;
-		dsp[1] = (j * dx) + vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
-		dsp[2] = (k * dx) + vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
+		dsp[0] = fma((double)i, (double)dx, (double)(vel[__GETINDEX(i, j, k) * 3 + 0] * dt));
+		dsp[1] = fma((double)j, (double)dx, (double)(vel[__GETINDEX(i, j, k) * 3 + 1] * dt));
+		dsp[2] = fma((double)k, (double)dx, (double)(vel[__GETINDEX(i, j, k) * 3 + 2] * dt));
 
 		InterpolateCUDA(dsp, PhiAuxB, &itp, idx, N);
 
@@ -102,9 +106,9 @@ __global__ void EccCUDA(
 
 	if (i > 0 && j > 0 && k > 0 && i < N - 1 && j < N - 1 && k < N - 1) {
 
-		dsp[0] = (i * dx) - vel[__GETINDEX(i, j, k) * 3 + 0] * dt;
-		dsp[1] = (j * dx) - vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
-		dsp[2] = (k * dx) - vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
+		dsp[0] = fma((double)i, (double)dx, (double)(-vel[__GETINDEX(i, j, k) * 3 + 0] * dt));
+		dsp[1] = fma((double)j, (double)dx, (double)(-vel[__GETINDEX(i, j, k) * 3 + 1] * dt));
+		dsp[2] = fma((double)k, (double)dx, (double)(-vel[__GETINDEX(i, j, k) * 3 + 2] * dt));
 
 		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], idx, N);
 	}
@@ -196,7 +200,11 @@ public:
 
   virtual void PrepareCUDA() {
 
-	  int num_bytes = (rX + rBW) * (rY + rBW) * (rZ + rBW);
+	  num_bytes = (rX + rBW) * (rY + rBW) * (rZ + rBW);
+
+	  ELX = (rX + rBW) / BBX;
+	  ELY = (rX + rBW) / BBY;
+	  ELZ = (rX + rBW) / BBZ;
 
 	  cudaMalloc((void**)&d_PhiA, num_bytes * sizeof(double));
 	  cudaMalloc((void**)&d_PhiB, num_bytes * sizeof(double));
@@ -206,11 +214,16 @@ public:
 	  cudaStreamCreate(&stream0);
 	  cudaStreamCreate(&stream1);
 
+	  for (int c = 0; c < BBZ + 2; c++) {
+		  cudaStreamCreate(&dstream1[c]);
+	  }
+
 	  cudaMemset(d_PhiB, 0, num_bytes * sizeof(double));
 	  cudaMemset(d_PhiC, 0, num_bytes * sizeof(double));
   }
 
   virtual void FinishCUDA() {
+
 	  cudaFree(d_PhiA);
 	  cudaFree(d_PhiB);
 	  cudaFree(d_PhiC);
@@ -218,24 +231,20 @@ public:
 
 	  cudaStreamDestroy(stream0);
 	  cudaStreamDestroy(stream1);
+
+	  for (int c = 0; c < 3; c++) {
+		  cudaEventDestroy(trail_eec[c]);
+	  }
+
+	  for (int c = 0; c < BBZ + 2; c++) {
+		  cudaStreamDestroy(dstream1[c]);
+	  }
   }
 
   /**
   * Executes the solver with CUDA
   **/
   virtual void ExecuteCUDA() {
-
-	int num_bytes = (rX + rBW) * (rY + rBW) * (rZ + rBW);
-
-	cudaError err = cudaGetLastError();
-
-	const int BBX = 1;
-	const int BBY = 1;
-	const int BBZ = 16;
-
-	int ELX = (rX + rBW) / BBX;
-	int ELY = (rX + rBW) / BBY;
-	int ELZ = (rX + rBW) / BBZ;
 
 	dim3 threads(TILE_X, TILE_Y, TILE_Z);
 	dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
@@ -244,13 +253,6 @@ public:
 	dim3 blocks_full((rX + rBW) / TILE_X, (rX + rBW) / TILE_Y, (rX + rBW) / TILE_Z);
 
 	int chunk_size = num_bytes / BBZ;
-
-	// Streamlined code
-	cudaStream_t dstream1[BBZ+2];
-
-	for (int c = 0; c < BBZ+2; c++) {
-		cudaStreamCreate(&dstream1[c]);
-	}
 
 	ResultType     * itr_phi = pPhiA;
 	double         * d_itr_phi = d_PhiA;
@@ -298,7 +300,6 @@ public:
 	}
 
 	// This needs to be implemented with events, since extrange rance conditions are present
-	cudaEvent_t trail_eec[3];
 
 	for (int c = 0; c < 3; c++) {
 		cudaEventCreate(&trail_eec[c]);
@@ -316,19 +317,13 @@ public:
 		d_itr_phi_res += chunk_size;
 	}
 
+	cudaError err = cudaGetLastError();
 	if (cudaSuccess != err) {
 		fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
 	}
 
 	cudaDeviceSynchronize(); // Not sure if this is necessary
 
-	for (int c = 0; c < 3; c++) {
-		cudaEventDestroy(trail_eec[c]);
-	}
-
-	for (int c = 0; c < BBZ+2; c++) {
-		cudaStreamDestroy(dstream1[c]);
-	}
 	/*
 	// end of the streamlined code
 
@@ -362,8 +357,6 @@ public:
     uint tid   = omp_get_thread_num();
     uint tsize = omp_get_num_threads();
 
-    // Preinterpolation();
-
     for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
       for(uint jj = 0; jj < rNB; jj++)
         for(uint ii = 0; ii < rNB; ii++)
@@ -371,7 +364,6 @@ public:
             for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
               for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
                 Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
-                // Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
 
     #pragma omp barrier
 
@@ -382,7 +374,6 @@ public:
             for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
               for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
                 Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
-                // ReverseApply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
 
     #pragma omp barrier
    
@@ -393,7 +384,6 @@ public:
             for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
               for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
                 Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
-                // Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k,&pFactors[IndexType::GetIndex(pBlock,i,j,k)*8]);
   }
 
   void Preinterpolation() {
@@ -517,6 +507,12 @@ public:
 
 private:
 
+  int num_bytes;
+
+  int ELX;
+  int ELY;
+  int ELZ;
+
   double * pFactors;
 
   BlockType * pBlock;
@@ -532,6 +528,9 @@ private:
 
   cudaStream_t stream0;
   cudaStream_t stream1;
+
+  cudaStream_t dstream1[BBZ + 2];
+  cudaEvent_t trail_eec[3];
 
   Variable3DType * pVelocity;
 
