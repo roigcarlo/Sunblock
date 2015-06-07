@@ -9,7 +9,7 @@
 
 #define TILE_X 16
 #define TILE_Y 16
-#define TILE_Z 16
+#define TILE_Z 8
 #define TE     2
 
 #define __GETINDEX(_i,_j,_k) ((_k)*N*N + (_j)*N + (_i))
@@ -259,7 +259,7 @@ public:
 
 	const int BBX = 1;
 	const int BBY = 1;
-	const int BBZ = 8;
+	const int BBZ = 16;
 
 	int ELX = (rX + rBW) / BBX;
 	int ELY = (rX + rBW) / BBY;
@@ -274,9 +274,9 @@ public:
 	int chunk_size = num_bytes / BBZ;
 
 	// Streamlined code
-	cudaStream_t dstream1[BBZ];
+	cudaStream_t dstream1[BBZ+2];
 
-	for (int c = 0; c < BBZ; c++) {
+	for (int c = 0; c < BBZ+2; c++) {
 		cudaStreamCreate(&dstream1[c]);
 	}
 
@@ -285,6 +285,9 @@ public:
 
 	Variable3DType * itr_vel = pVelocity;
 	double         * d_itr_vel = d_vel;
+
+	ResultType     * itr_phi_res = pPhiA;
+	double         * d_itr_phi_res = d_PhiA;
 
 	cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[0]);
 	cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double)    , cudaMemcpyHostToDevice, dstream1[0]);
@@ -300,16 +303,60 @@ public:
 		cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double), cudaMemcpyHostToDevice, dstream1[c]);
 
 		BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
+		if (c > 1) {
+			ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
+			if (c > 2) {
+				EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
+			}
+		}
 	}
 
-	BackCUDA <<< threads     , blocks     , 0, dstream1[(BBZ-1)] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (BBZ - 1) * ELZ);
-	ForthCUDA<<< threads_full, blocks_full, 0, dstream1[(BBZ-1)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, 0 * ELZ);
-	EccCUDA  <<< threads_full, blocks_full, 0, dstream1[(BBZ-1)] >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, 0 * ELZ);
+	for (int c = 0; c < BBZ - 3; c++) {
+		cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[3 + c]);
+		itr_phi_res += chunk_size;
+		d_itr_phi_res += chunk_size;
+	}
 
-	for (int c = 0; c < BBZ; c++) {
+	for (int c = BBZ - 1; c < BBZ; c++) {
+		BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+	}
+
+	for (int c = BBZ - 2; c < BBZ; c++) {
+		ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+	}
+
+	// This needs to be implemented with events, since extrange rance conditions are present
+	cudaEvent_t trail_eec[3];
+
+	for (int c = 0; c < 3; c++) {
+		cudaEventCreate(&trail_eec[c]);
+	}
+	
+	for (int c = 1; c <= 3; c++) {
+
+		if (c > 1)
+			cudaStreamWaitEvent(dstream1[(BBZ - 3 + c - 2)], trail_eec[c - 2], 0);
+
+		EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+		cudaEventRecord(trail_eec[c - 1], dstream1[(BBZ - 3 + c)]);
+		cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[(BBZ - 3 + c)]);
+		itr_phi_res += chunk_size;
+		d_itr_phi_res += chunk_size;
+	}
+
+	if (cudaSuccess != err) {
+		fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
+	}
+
+	cudaDeviceSynchronize(); // Not sure if this is necessary
+
+	for (int c = 0; c < 3; c++) {
+		cudaEventDestroy(trail_eec[c]);
+	}
+
+	for (int c = 0; c < BBZ+2; c++) {
 		cudaStreamDestroy(dstream1[c]);
 	}
-
 	/*
 	// end of the streamlined code
 
@@ -332,16 +379,7 @@ public:
 		  EccCUDA  <<< threads, blocks, 0, stream0 >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 	*/
 
-	if (cudaSuccess != err)
-	{
-		fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
-	}
-
-	cudaDeviceSynchronize();
-
-	cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
-
-	// printf("Finish! printing sample pPhiA array... %f\n", pPhiA[0]);
+	//cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
   }
 
   /**
