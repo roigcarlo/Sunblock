@@ -14,11 +14,11 @@
 
 #define __GETINDEX(_i,_j,_k) ((_k)*N*N + (_j)*N + (_i))
 
-void __device__ InterpolateCUDA(double * Coords, double * in, double * out, const double &dx, const int &N) {
+void __device__ InterpolateCUDA(double * Coords, double * in, double * out, const double &idx, const int &N) {
 	int pi, pj, pk, ni, nj, nk;
 
 	for (int d = 0; d < 3; d++)
-		Coords[d] *= (1/dx);
+		Coords[d] *= (idx);
 
 	pi = (int)floor(Coords[0]); ni = pi + 1;
 	pj = (int)floor(Coords[1]); nj = pj + 1;
@@ -42,38 +42,10 @@ void __device__ InterpolateCUDA(double * Coords, double * in, double * out, cons
 	out[0] = (a + b + c + d + e + f + g + h);
 }
 
-__global__ void prebCUDA(
-	double * in, double * out,
-	const double dx, const double dt, const int N,
-	const int ii, const int jj, const int kk) {
-
-	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
-	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
-	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
-
-	out[0] = (i * dx) - in[__GETINDEX(i, j, k) * 3 + 0] * dt;
-	out[1] = (j * dx) - in[__GETINDEX(i, j, k) * 3 + 1] * dt;
-	out[2] = (k * dx) - in[__GETINDEX(i, j, k) * 3 + 2] * dt;
-}
-
-__global__ void prefCUDA(
-	double * in, double * out,
-	const double dx, const double dt, const int N,
-	const int ii, const int jj, const int kk) {
-
-	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
-	int j = blockIdx.y * blockDim.y + threadIdx.y + jj;
-	int k = blockIdx.z * blockDim.z + threadIdx.z + kk;
-
-	out[0] = (i * dx) + in[__GETINDEX(i, j, k) * 3 + 0] * dt;
-	out[1] = (j * dx) + in[__GETINDEX(i, j, k) * 3 + 1] * dt;
-	out[2] = (k * dx) + in[__GETINDEX(i, j, k) * 3 + 2] * dt;
-}
-
 __global__ void BackCUDA(
 	double * out, 
 	double * PhiAux, double * vel,
-	const double dx, const double dt, const int N,
+	const double dx, const double idx, const double dt, const int N,
 	const int ii, const int jj, const int kk) {
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
@@ -88,14 +60,14 @@ __global__ void BackCUDA(
 		dsp[1] = (j * dx) - vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
 		dsp[2] = (k * dx) - vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
 
-		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], dx, N);
+		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], idx, N);
 	}
 }
 
 __global__ void ForthCUDA(
 	double * out,
 	double * PhiAuxA, double * PhiAuxB, double * vel,
-	const double dx, const double dt, const int N,
+	const double dx, const double idx, const double dt, const int N,
 	const int ii, const int jj, const int kk) {
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
@@ -110,7 +82,7 @@ __global__ void ForthCUDA(
 		dsp[1] = (j * dx) + vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
 		dsp[2] = (k * dx) + vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
 
-		InterpolateCUDA(dsp, PhiAuxB, &itp, dx, N);
+		InterpolateCUDA(dsp, PhiAuxB, &itp, idx, N);
 
 		out[__GETINDEX(i, j, k)] = 1.5 * PhiAuxA[__GETINDEX(i, j, k)] - 0.5 * itp;
 	}
@@ -119,7 +91,7 @@ __global__ void ForthCUDA(
 __global__ void EccCUDA(
 	double * out,
 	double * PhiAux, double * vel,
-	const double dx, const double dt, const int N,
+	const double dx, const double idx, const double dt, const int N,
 	const int ii, const int jj, const int kk) {
 
 	int i = blockIdx.x * blockDim.x + threadIdx.x + ii;
@@ -134,7 +106,7 @@ __global__ void EccCUDA(
 		dsp[1] = (j * dx) - vel[__GETINDEX(i, j, k) * 3 + 1] * dt;
 		dsp[2] = (k * dx) - vel[__GETINDEX(i, j, k) * 3 + 2] * dt;
 
-		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], dx, N);
+		InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], idx, N);
 	}
 }
 
@@ -302,11 +274,11 @@ public:
 		cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[c]);
 		cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double), cudaMemcpyHostToDevice, dstream1[c]);
 
-		BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
+		BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
 		if (c > 1) {
-			ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
+			ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
 			if (c > 2) {
-				EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
+				EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
 			}
 		}
 	}
@@ -318,11 +290,11 @@ public:
 	}
 
 	for (int c = BBZ - 1; c < BBZ; c++) {
-		BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+		BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
 	}
 
 	for (int c = BBZ - 2; c < BBZ; c++) {
-		ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+		ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
 	}
 
 	// This needs to be implemented with events, since extrange rance conditions are present
@@ -337,7 +309,7 @@ public:
 		if (c > 1)
 			cudaStreamWaitEvent(dstream1[(BBZ - 3 + c - 2)], trail_eec[c - 2], 0);
 
-		EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+		EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
 		cudaEventRecord(trail_eec[c - 1], dstream1[(BBZ - 3 + c)]);
 		cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[(BBZ - 3 + c)]);
 		itr_phi_res += chunk_size;
