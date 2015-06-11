@@ -186,9 +186,6 @@ public:
     dim3 threads(TILE_X, TILE_Y, TILE_Z);
     dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
 
-    dim3 threads_full(TILE_X, TILE_Y, TILE_Z);
-    dim3 blocks_full((rX + rBW) / TILE_X, (rX + rBW) / TILE_Y, (rX + rBW) / TILE_Z);
-
     int chunk_size = num_bytes / BBZ;
 
     ResultType     * itr_phi = pPhiA;
@@ -204,7 +201,6 @@ public:
     cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double)    , cudaMemcpyHostToDevice, dstream1[0]);
 
     for (int c = 1; c < BBZ; c++) {
-
       itr_phi   += chunk_size;
       d_itr_phi += chunk_size;
       itr_vel   += chunk_size;
@@ -254,6 +250,7 @@ public:
     }
 
     cudaError err = cudaGetLastError();
+
     if (cudaSuccess != err) {
       fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
     }
@@ -265,6 +262,9 @@ public:
   * Executes the solver with CUDA
   **/
   virtual void ExecuteSimpleCUDA() {
+
+    dim3 threads(TILE_X, TILE_Y, TILE_Z);
+    dim3 blocks(rX / TILE_X, rY / TILE_Y, rZ / TILE_Z);
 
     cudaMemcpy(d_vel , pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice);
     cudaMemcpy(d_PhiA, pPhiA    , num_bytes * sizeof(double)    , cudaMemcpyHostToDevice);
