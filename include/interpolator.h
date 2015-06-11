@@ -28,93 +28,6 @@ public:
   TrilinealInterpolator() {}
   ~TrilinealInterpolator() {}
 
-  static void CalculateFactors( 
-      BlockType * block,
-      Variable3DType Coords,
-      double * Factors) {
-
-    uint pi,pj,pk;
-
-    Utils::GlobalToLocal(Coords,block->rIdx);
-
-    pi = (uint)(Coords[0]);
-    pj = (uint)(Coords[1]);
-    pk = (uint)(Coords[2]);
-
-    double Nx, Ny, Nz;
-
-    Nx = 1-(Coords[0] - pi);
-    Ny = 1-(Coords[1] - pj);
-    Nz = 1-(Coords[2] - pk);
-
-    Factors[0] = (    Nx) * (    Ny) * (    Nz);
-    Factors[1] = (1 - Nx) * (    Ny) * (    Nz);
-    Factors[2] = (    Nx) * (1 - Ny) * (    Nz);
-    Factors[3] = (1 - Nx) * (1 - Ny) * (    Nz);
-    Factors[4] = (    Nx) * (    Ny) * (1 - Nz);
-    Factors[5] = (1 - Nx) * (    Ny) * (1 - Nz);
-    Factors[6] = (    Nx) * (1 - Ny) * (1 - Nz);
-    Factors[7] = (1 - Nx) * (1 - Ny) * (1 - Nz); 
-  }
-
-  static void Interpolate(
-      BlockType * block,
-      VariableType * OldPhi,
-      VariableType * NewPhi,
-      Variable3DType Coords,
-      double * Factors) {
-
-    uint pi,pj,pk;
-
-    Utils::GlobalToLocal(Coords,block->rIdx);
-
-    pi = (uint)(Coords[0]);
-    pj = (uint)(Coords[1]);
-    pk = (uint)(Coords[2]);
-
-    uint cellIndex = IndexType::GetIndex(block,pi,pj,pk);
-
-    double a = OldPhi[cellIndex                ] * Factors[0];
-    double b = OldPhi[cellIndex + block->mPaddA] * Factors[1];
-    double c = OldPhi[cellIndex + block->mPaddB] * Factors[2];
-    double d = OldPhi[cellIndex + block->mPaddC] * Factors[3];
-    double e = OldPhi[cellIndex + block->mPaddD] * Factors[4];
-    double f = OldPhi[cellIndex + block->mPaddE] * Factors[5];
-    double g = OldPhi[cellIndex + block->mPaddF] * Factors[6];
-    double h = OldPhi[cellIndex + block->mPaddG] * Factors[7];
-
-    (*NewPhi) = (a+b+c+d+e+f+g+h);
-  }
-
-  static void ReverseInterpolate(
-      BlockType * block,
-      VariableType * OldPhi,
-      VariableType * NewPhi,
-      Variable3DType Coords,
-      double * Factors) {
-
-    uint pi,pj,pk;
-
-    Utils::GlobalToLocal(Coords,block->rIdx);
-
-    pi = (uint)(Coords[0]);
-    pj = (uint)(Coords[1]);
-    pk = (uint)(Coords[2]);
-
-    uint cellIndex = IndexType::GetIndex(block,pi,pj,pk);
-
-    double a = OldPhi[cellIndex                ] * Factors[3];
-    double b = OldPhi[cellIndex + block->mPaddA] * Factors[2];
-    double c = OldPhi[cellIndex + block->mPaddB] * Factors[1];
-    double d = OldPhi[cellIndex + block->mPaddC] * Factors[0];
-    double e = OldPhi[cellIndex + block->mPaddD] * Factors[7];
-    double f = OldPhi[cellIndex + block->mPaddE] * Factors[6];
-    double g = OldPhi[cellIndex + block->mPaddF] * Factors[5];
-    double h = OldPhi[cellIndex + block->mPaddG] * Factors[4];
-
-    (*NewPhi) = (a+b+c+d+e+f+g+h);
-  }
-
   static void Interpolate(
       BlockType * block,
       VariableType * OldPhi,
@@ -147,8 +60,6 @@ public:
     (*NewPhi) += OldPhi[cellIndex + block->mPaddE] * (1 - Nx) * (    Ny) * (1 - Nz);
     (*NewPhi) += OldPhi[cellIndex + block->mPaddF] * (    Nx) * (1 - Ny) * (1 - Nz);
     (*NewPhi) += OldPhi[cellIndex + block->mPaddG] * (1 - Nx) * (1 - Ny) * (1 - Nz);
-
-    //(*NewPhi) = (a+b+c+d+e+f+g+h);
   }
 
   static void Interpolate(

@@ -127,7 +127,7 @@ public:
 
   virtual void Execute(){}
   virtual void ExecuteBlock(){}
-  virtual void ExecuteCUDA(){}
+  virtual void ExecuteCUDAf(){}
 
 };
 
@@ -390,34 +390,6 @@ public:
   */
 
   //cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
-  }
-
-  void Preinterpolation() {
-
-    uint tid   = omp_get_thread_num();
-    uint tsize = omp_get_num_threads();
-
-    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize) {
-      for(uint j = rBWP; j < rY + rBWP; j++) {
-        for(uint i = rBWP; i < rX + rBWP; i++) {
-
-          uint cell = IndexType::GetIndex(pBlock,i,j,k);
-
-          Variable3DType  origin;
-          Variable3DType  displacement;
-
-          origin[0] = i * rDx;
-          origin[1] = j * rDx;
-          origin[2] = k * rDx;
-
-          for(int d = 0; d < 3; d++) {
-            displacement[d] = origin[d] - pVelocity[cell][d] * rDt;
-          }
-
-          InterpolateType::CalculateFactors(pBlock,displacement,&pFactors[cell*8]);
-        }
-      }
-    }
   }
 
   /**
