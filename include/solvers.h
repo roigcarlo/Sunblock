@@ -19,7 +19,7 @@ template <
   typename IndexType,
   typename BlockType,
   typename InterpolateType
-  >
+>
 class Solver {
 public:
   Solver(){}
@@ -37,35 +37,32 @@ template <
   typename IndexType,
   typename BlockType,
   typename InterpolateType
-  >
+>
 class BfeccSolver : public Solver<ResultType,IndexType,BlockType,InterpolateType> {
 public:
 
   BfeccSolver(BlockType * block) :
-    Solver<ResultType,IndexType,BlockType,InterpolateType>(),
-    pBlock(block),
-    pPhiA(block->pPhiA),
-    pPhiB(block->pPhiB), 
-    pPhiC(block->pPhiC),
-    pVelocity(block->pVelocity),
-    rDx(block->rDx),
-    rIdx(1.0/block->rDx),
-    rDt(block->rDt),
-    rBW(block->rBW),
-    rBWP(block->rBW/2),
-    rX(block->rX),
-    rY(block->rY),
-    rZ(block->rZ),
-    rNB(block->rNB),
-    rNE(block->rNE) {
+      Solver<ResultType,IndexType,BlockType,InterpolateType>(),
+      pBlock(block),
+      pPhiA(block->pPhiA),
+      pPhiB(block->pPhiB), 
+      pPhiC(block->pPhiC),
+      pVelocity(block->pVelocity),
+      rDx(block->rDx),
+      rIdx(1.0/block->rDx),
+      rDt(block->rDt),
+      rBW(block->rBW),
+      rBWP(block->rBW/2),
+      rX(block->rX),
+      rY(block->rY),
+      rZ(block->rZ),
+      rNB(block->rNB),
+      rNE(block->rNE) {
 
-      pFactors = (double *)malloc(sizeof(double) * (rX+rBW) * (rY+rBW) * (rZ+rBW) * 8);
-
-    }
+  }
 
   ~BfeccSolver() {
 
-    free(pFactors);
   }
 
   /**
@@ -331,8 +328,6 @@ private:
   int ELX;
   int ELY;
   int ELZ;
-
-  double * pFactors;
 
   BlockType * pBlock;
 
