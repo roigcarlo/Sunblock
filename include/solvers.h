@@ -401,67 +401,6 @@ public:
    **/ 
   void Apply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
       const double &Sign, const double &WeightA, const double &WeightB,
-      const uint &i, const uint &j, const uint &k, double * Factors) {
-
-    uint cell = IndexType::GetIndex(pBlock,i,j,k);
-    
-    VariableType    iPhi;
-    Variable3DType  origin;
-    Variable3DType  displacement;
-
-    origin[0] = i * rDx;
-    origin[1] = j * rDx;
-    origin[2] = k * rDx;
-
-    for(int d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
-    }
-
-    InterpolateType::Interpolate(pBlock,PhiAuxB,&iPhi,displacement,Factors);
-
-    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
-  }
-
-  /**
-   * Performs the bfecc operation over a given element
-   * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
-   * weightA: weigth of the first  operator (A)
-   * weightB: weigth of the second operator (B)
-   * @i,j,k:  Index of the cell
-   **/ 
-  void ReverseApply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
-      const double &Sign, const double &WeightA, const double &WeightB,
-      const uint &i, const uint &j, const uint &k, double * Factors) {
-
-    uint cell = IndexType::GetIndex(pBlock,i,j,k);
-    
-    VariableType    iPhi;
-    Variable3DType  origin;
-    Variable3DType  displacement;
-
-    origin[0] = i * rDx;
-    origin[1] = j * rDx;
-    origin[2] = k * rDx;
-
-    for(int d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
-    }
-
-    InterpolateType::ReverseInterpolate(pBlock,PhiAuxB,&iPhi,displacement,Factors);
-
-    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
-  }
-
-
-  /**
-   * Performs the bfecc operation over a given element
-   * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
-   * weightA: weigth of the first  operator (A)
-   * weightB: weigth of the second operator (B)
-   * @i,j,k:  Index of the cell
-   **/ 
-  void Apply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
-      const double &Sign, const double &WeightA, const double &WeightB,
       const uint &i, const uint &j, const uint &k) {
 
     uint cell = IndexType::GetIndex(pBlock,i,j,k);
