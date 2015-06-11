@@ -125,9 +125,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = (uint)(Coords[0]);
-    pj = (uint)(Coords[1]);
-    pk = (uint)(Coords[2]);
+    pi = (uint)floor(Coords[0]); ni = pi + 1;
+  	pj = (uint)floor(Coords[1]); nj = pj + 1;
+  	pk = (uint)floor(Coords[2]); nk = pk + 1;
 
     double Nx, Ny, Nz;
 

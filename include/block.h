@@ -99,9 +99,9 @@ public:
   void WriteHeatFocus() {
     uint Xc, Yc, Zc;
 
-    Xc = 2.0/5.0*(rX);
-    Yc = 2.0/5.5*(rY);
-    Zc = 1.0/2.0*(rZ);
+    Xc = (uint)(2.0 / 5.0 * (rX));
+	Yc = (uint)(2.0 / 5.5 * (rY));
+	Zc = (uint)(1.0 / 2.0 * (rZ));
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
