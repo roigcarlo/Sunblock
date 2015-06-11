@@ -70,13 +70,10 @@ public:
    **/
   virtual void Execute() {
 
-    uint tid;
-    uint tsize;
-
     #pragma omp parallel
     {
-      tid   = omp_get_thread_num();
-      tsize = omp_get_num_threads();
+      uint tid   = omp_get_thread_num();
+      uint tsize = omp_get_num_threads();
 
       for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
         for(uint j = rBWP; j < rY + rBWP; j++)
@@ -104,13 +101,10 @@ public:
    **/
   virtual void ExecuteBlock() {
 
-    uint tid;
-    uint tsize;
-
     #pragma omp parallel
     {
-      tid   = omp_get_thread_num();
-      tsize = omp_get_num_threads();
+      uint tid   = omp_get_thread_num();
+      uint tsize = omp_get_num_threads();
 
       for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
         for(uint jj = 0; jj < rNB; jj++)
