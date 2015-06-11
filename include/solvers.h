@@ -289,107 +289,108 @@ public:
   **/
   virtual void ExecuteCUDA() {
 
-  dim3 threads(TILE_X, TILE_Y, TILE_Z);
-  dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
+    dim3 threads(TILE_X, TILE_Y, TILE_Z);
+    dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
 
-  dim3 threads_full(TILE_X, TILE_Y, TILE_Z);
-  dim3 blocks_full((rX + rBW) / TILE_X, (rX + rBW) / TILE_Y, (rX + rBW) / TILE_Z);
+    dim3 threads_full(TILE_X, TILE_Y, TILE_Z);
+    dim3 blocks_full((rX + rBW) / TILE_X, (rX + rBW) / TILE_Y, (rX + rBW) / TILE_Z);
 
-  int chunk_size = num_bytes / BBZ;
+    int chunk_size = num_bytes / BBZ;
 
-  ResultType     * itr_phi = pPhiA;
-  double         * d_itr_phi = d_PhiA;
+    ResultType     * itr_phi = pPhiA;
+    double         * d_itr_phi = d_PhiA;
 
-  Variable3DType * itr_vel = pVelocity;
-  double         * d_itr_vel = d_vel;
+    Variable3DType * itr_vel = pVelocity;
+    double         * d_itr_vel = d_vel;
 
-  ResultType     * itr_phi_res = pPhiA;
-  double         * d_itr_phi_res = d_PhiA;
+    ResultType     * itr_phi_res = pPhiA;
+    double         * d_itr_phi_res = d_PhiA;
 
-  cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[0]);
-  cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double)    , cudaMemcpyHostToDevice, dstream1[0]);
+    cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[0]);
+    cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double)    , cudaMemcpyHostToDevice, dstream1[0]);
 
-  for (int c = 1; c < BBZ; c++) {
+    for (int c = 1; c < BBZ; c++) {
 
-    itr_phi   += chunk_size;
-    d_itr_phi += chunk_size;
-    itr_vel   += chunk_size;
-    d_itr_vel += (chunk_size * 3);
+      itr_phi   += chunk_size;
+      d_itr_phi += chunk_size;
+      itr_vel   += chunk_size;
+      d_itr_vel += (chunk_size * 3);
 
-    cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[c]);
-    cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double), cudaMemcpyHostToDevice, dstream1[c]);
+      cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[c]);
+      cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double), cudaMemcpyHostToDevice, dstream1[c]);
 
-    BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
-    if (c > 1) {
-      ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
-      if (c > 2) {
-        EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
+      BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
+      if (c > 1) {
+        ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
+        if (c > 2) {
+          EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
+        }
       }
     }
+
+    for (int c = 0; c < BBZ - 3; c++) {
+      cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[3 + c]);
+      itr_phi_res += chunk_size;
+      d_itr_phi_res += chunk_size;
+    }
+
+    for (int c = BBZ - 1; c < BBZ; c++) {
+      BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+    }
+
+    for (int c = BBZ - 2; c < BBZ; c++) {
+      ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+    }
+
+    // This needs to be implemented with events, since extrange rance conditions are present
+    for (int c = 0; c < 3; c++) {
+      cudaEventCreate(&trail_eec[c]);
+    }
+    
+    for (int c = 1; c <= 3; c++) {
+
+      if (c > 1)
+        cudaStreamWaitEvent(dstream1[(BBZ - 3 + c - 2)], trail_eec[c - 2], 0);
+
+      EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+      cudaEventRecord(trail_eec[c - 1], dstream1[(BBZ - 3 + c)]);
+      cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[(BBZ - 3 + c)]);
+      itr_phi_res += chunk_size;
+      d_itr_phi_res += chunk_size;
+    }
+
+    cudaError err = cudaGetLastError();
+    if (cudaSuccess != err) {
+      fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
+    }
+
+    cudaDeviceSynchronize(); // Not sure if this is necessary
   }
 
-  for (int c = 0; c < BBZ - 3; c++) {
-    cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[3 + c]);
-    itr_phi_res += chunk_size;
-    d_itr_phi_res += chunk_size;
-  }
+  /**
+  * Executes the solver with CUDA
+  **/
+  virtual void ExecuteSimpleCUDA() {
 
-  for (int c = BBZ - 1; c < BBZ; c++) {
-    BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
-  }
+    cudaMemcpyAsync(d_vel, pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice, stream0);
+    cudaMemcpyAsync(d_PhiA, pPhiA, num_bytes * sizeof(double), cudaMemcpyHostToDevice, stream0);
 
-  for (int c = BBZ - 2; c < BBZ; c++) {
-    ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
-  }
+    for (int i = 0; i < BBX; i++)
+      for (int j = 0; j < BBY; j++)
+        for (int k = 0; k < BBZ; k++)
+          BackCUDA <<< threads, blocks, 0, stream0 >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
-  // This needs to be implemented with events, since extrange rance conditions are present
+    for (int i = 0; i < BBX; i++)
+      for (int j = 0; j < BBY; j++)
+        for (int k = 0; k < BBZ; k++)
+          ForthCUDA<<< threads, blocks, 0, stream0 >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
-  for (int c = 0; c < 3; c++) {
-    cudaEventCreate(&trail_eec[c]);
-  }
-  
-  for (int c = 1; c <= 3; c++) {
+    for (int i = 0; i < BBX; i++)
+      for (int j = 0; j < BBY; j++)
+        for (int k = 0; k < BBZ; k++)
+          EccCUDA  <<< threads, blocks, 0, stream0 >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
-    if (c > 1)
-      cudaStreamWaitEvent(dstream1[(BBZ - 3 + c - 2)], trail_eec[c - 2], 0);
-
-    EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
-    cudaEventRecord(trail_eec[c - 1], dstream1[(BBZ - 3 + c)]);
-    cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[(BBZ - 3 + c)]);
-    itr_phi_res += chunk_size;
-    d_itr_phi_res += chunk_size;
-  }
-
-  cudaError err = cudaGetLastError();
-  if (cudaSuccess != err) {
-    fprintf(stderr, "cudaCheckError() failed: %s\n", cudaGetErrorString(err));
-  }
-
-  cudaDeviceSynchronize(); // Not sure if this is necessary
-
-  /*
-  // end of the streamlined code
-
-  cudaMemcpyAsync(d_vel, pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice, stream0);
-  cudaMemcpyAsync(d_PhiA, pPhiA, num_bytes * sizeof(double), cudaMemcpyHostToDevice, stream0);
-
-  for (int i = 0; i < BBX; i++)
-    for (int j = 0; j < BBY; j++)
-    for (int k = 0; k < BBZ; k++)
-      BackCUDA <<< threads, blocks, 0, stream0 >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
-
-  for (int i = 0; i < BBX; i++)
-    for (int j = 0; j < BBY; j++)
-    for (int k = 0; k < BBZ; k++)
-      ForthCUDA<<< threads, blocks, 0, stream0 >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
-
-  for (int i = 0; i < BBX; i++)
-    for (int j = 0; j < BBY; j++)
-    for (int k = 0; k < BBZ; k++)
-      EccCUDA  <<< threads, blocks, 0, stream0 >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
-  */
-
-  //cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
   }
 
   /**
