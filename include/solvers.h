@@ -166,35 +166,37 @@ public:
   }
 
   /**
-   * Executes the solver 
+   * Executes the solver using CPU resources without blocking
    **/
   virtual void Execute() {
 
-    uint tid   = omp_get_thread_num();
-    uint tsize = omp_get_num_threads();
+    uint tid;
+    uint tsize;
 
-    // Preinterpolation();
+    #pragma omp parallel
+    {
+      tid   = omp_get_thread_num();
+      tsize = omp_get_num_threads();
 
-    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
-      for(uint j = rBWP; j < rY + rBWP; j++)
-        for(uint i = rBWP; i < rX + rBWP; i++)
-          Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
+      for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
+        for(uint j = rBWP; j < rY + rBWP; j++)
+          for(uint i = rBWP; i < rX + rBWP; i++)
+            Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
 
-    #pragma omp barrier
+      #pragma omp barrier
 
-    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
-      for(uint j = rBWP; j < rY + rBWP; j++)
-        for(uint i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
-        }
+      for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
+        for(uint j = rBWP; j < rY + rBWP; j++)
+          for(uint i = rBWP; i < rX + rBWP; i++)
+            Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
 
-    #pragma omp barrier
+      #pragma omp barrier
 
-    for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
-      for(uint j = rBWP; j < rY + rBWP; j++)
-        for(uint i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
-        }
+      for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
+        for(uint j = rBWP; j < rY + rBWP; j++)
+          for(uint i = rBWP; i < rX + rBWP; i++)
+            Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
+    }
   }
 
 
@@ -224,21 +226,23 @@ public:
 
   virtual void FinishCUDA() {
 
+    for (int c = 0; c < BBZ + 2; c++) {
+      cudaStreamDestroy(dstream1[c]);
+    }
+
+    cudaStreamDestroy(stream0);
+    cudaStreamDestroy(stream1);
+
 	  cudaFree(d_PhiA);
 	  cudaFree(d_PhiB);
 	  cudaFree(d_PhiC);
 	  cudaFree(d_vel);
 
-	  cudaStreamDestroy(stream0);
-	  cudaStreamDestroy(stream1);
-
 	  for (int c = 0; c < 3; c++) {
 		  cudaEventDestroy(trail_eec[c]);
 	  }
 
-	  for (int c = 0; c < BBZ + 2; c++) {
-		  cudaStreamDestroy(dstream1[c]);
-	  }
+    cudaDeviceReset();
   }
 
   /**
@@ -246,7 +250,7 @@ public:
   **/
   virtual void ExecuteCUDA() {
 
-	dim3 threads(TILE_X, TILE_Y, TILE_Z);
+  dim3 threads(TILE_X, TILE_Y, TILE_Z);
 	dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
 
 	dim3 threads_full(TILE_X, TILE_Y, TILE_Z);

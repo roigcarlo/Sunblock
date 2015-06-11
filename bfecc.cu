@@ -154,37 +154,30 @@ int main(int argc, char *argv[]) {
   int test = 0;
 
   if (test == 0) {
-	AdvectonStep.PrepareCUDA();
-	for (int i = 0; i < steeps; i++) {
-		AdvectonStep.ExecuteCUDA();
-		//if (OutputStep == 0) {
-		//io.WriteGidResults(step0,N,N,N,i);
-		//OutputStep = 200;
-		//}
-		//OutputStep--;
-	}
-	AdvectonStep.FinishCUDA();
-	cudaDeviceReset();
+    AdvectonStep.PrepareCUDA();
+	  for (int i = 0; i < steeps; i++) {
+		  AdvectonStep.ExecuteCUDA();
+      // if (OutputStep == 0) {
+      //   io.WriteGidResults(step0,N,N,N,i);
+      //   OutputStep = 200;
+      // }
+      // OutputStep--;
+    }
+    AdvectonStep.FinishCUDA();
   } else {
-	#pragma omp parallel
-	{
-		for (int i = 0; i < steeps; i++) {
+    for (int i = 0; i < steeps; i++) {
 			AdvectonStep.Execute();
-			#pragma omp single
-			{
-				if (OutputStep == 0) {
-					io.WriteGidResults(step0,N,N,N,i);
-					OutputStep = 200;
-				}
-				OutputStep--;
-			}
+			// if (OutputStep == 0) {
+			// 	io.WriteGidResults(step0,N,N,N,i);
+			// 	OutputStep = 200;
+			// }
+			// OutputStep--;
 		}
 	}
   }
 
 #ifndef _WIN32
   gettimeofday(&end, NULL);
-
   duration = FETCHTIME
 #else
   end = GetTickCount();
