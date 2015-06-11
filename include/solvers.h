@@ -152,9 +152,6 @@ public:
     cudaMalloc((void**)&d_PhiC, num_bytes * sizeof(double));
     cudaMalloc((void**)&d_vel,  num_bytes * sizeof(double) * 3);
 
-    cudaStreamCreate(&stream0);
-    cudaStreamCreate(&stream1);
-
     for (int c = 0; c < BBZ + 2; c++) {
       cudaStreamCreate(&dstream1[c]);
     }
@@ -168,9 +165,6 @@ public:
     for (int c = 0; c < BBZ + 2; c++) {
       cudaStreamDestroy(dstream1[c]);
     }
-
-    cudaStreamDestroy(stream0);
-    cudaStreamDestroy(stream1);
 
     cudaFree(d_PhiA);
     cudaFree(d_PhiB);
@@ -272,25 +266,25 @@ public:
   **/
   virtual void ExecuteSimpleCUDA() {
 
-    cudaMemcpyAsync(d_vel, pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice, stream0);
-    cudaMemcpyAsync(d_PhiA, pPhiA, num_bytes * sizeof(double), cudaMemcpyHostToDevice, stream0);
+    cudaMemcpy(d_vel , pVelocity, num_bytes * sizeof(double) * 3, cudaMemcpyHostToDevice);
+    cudaMemcpy(d_PhiA, pPhiA    , num_bytes * sizeof(double)    , cudaMemcpyHostToDevice);
 
     for (int i = 0; i < BBX; i++)
       for (int j = 0; j < BBY; j++)
         for (int k = 0; k < BBZ; k++)
-          BackCUDA <<< threads, blocks, 0, stream0 >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
+          BackCUDA <<< threads, blocks >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
     for (int i = 0; i < BBX; i++)
       for (int j = 0; j < BBY; j++)
         for (int k = 0; k < BBZ; k++)
-          ForthCUDA<<< threads, blocks, 0, stream0 >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
+          ForthCUDA<<< threads, blocks >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
     for (int i = 0; i < BBX; i++)
       for (int j = 0; j < BBY; j++)
         for (int k = 0; k < BBZ; k++)
-          EccCUDA  <<< threads, blocks, 0, stream0 >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
+          EccCUDA  <<< threads, blocks >>>(d_PhiA, d_PhiC, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
-    cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
+    cudaMemcpy(pPhiA , d_PhiA   , num_bytes * sizeof(double)    , cudaMemcpyDeviceToHost);
   }
 
   /**
@@ -343,9 +337,6 @@ private:
   double * d_PhiB = 0;
   double * d_PhiC = 0;
   double * d_vel = 0;
-
-  cudaStream_t stream0;
-  cudaStream_t stream1;
 
   cudaStream_t dstream1[BBZ + 2];
   cudaEvent_t trail_eec[3];
