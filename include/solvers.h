@@ -126,6 +126,8 @@ public:
   ~Solver(){}
 
   virtual void Execute(){}
+  virtual void ExecuteBlock(){}
+  virtual void ExecuteCUDA(){}
 
 };
 
@@ -197,6 +199,43 @@ public:
           for(uint i = rBWP; i < rX + rBWP; i++)
             Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
     }
+  }
+
+  /**
+   * Executes the solver using blocking
+   **/
+  virtual void ExecuteBlock() {
+
+    uint tid   = omp_get_thread_num();
+    uint tsize = omp_get_num_threads();
+
+    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
+      for(uint jj = 0; jj < rNB; jj++)
+        for(uint ii = 0; ii < rNB; ii++)
+          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
+            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
+              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
+                Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
+
+    #pragma omp barrier
+
+    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
+      for(uint jj = 0; jj < rNB; jj++)
+        for(uint ii = 0; ii < rNB; ii++)
+          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
+            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
+              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
+                Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
+
+    #pragma omp barrier
+   
+    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
+      for(uint jj = 0; jj < rNB; jj++)
+        for(uint ii = 0; ii < rNB; ii++)
+          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
+            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
+              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
+                Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
   }
 
 
@@ -351,43 +390,6 @@ public:
   */
 
   //cudaMemcpy(pPhiA, d_PhiA, num_bytes * sizeof(double), cudaMemcpyDeviceToHost);
-  }
-
-  /**
-   * Executes the solver using blocking
-   **/
-  virtual void ExecuteBlock() {
-
-    uint tid   = omp_get_thread_num();
-    uint tsize = omp_get_num_threads();
-
-    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
-      for(uint jj = 0; jj < rNB; jj++)
-        for(uint ii = 0; ii < rNB; ii++)
-          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
-            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
-              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
-                Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
-
-    #pragma omp barrier
-
-    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
-      for(uint jj = 0; jj < rNB; jj++)
-        for(uint ii = 0; ii < rNB; ii++)
-          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
-            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
-              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
-                Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
-
-    #pragma omp barrier
-   
-    for(uint kk = 0 + tid; kk < rNB; kk+= tsize)
-      for(uint jj = 0; jj < rNB; jj++)
-        for(uint ii = 0; ii < rNB; ii++)
-          for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
-            for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
-              for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
-                Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
   }
 
   void Preinterpolation() {
