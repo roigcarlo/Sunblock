@@ -136,7 +136,7 @@ public:
     }
   }
 
-
+#ifdef USE_CUDA
   virtual void PrepareCUDA() {
 
     num_bytes = (rX + rBW) * (rY + rBW) * (rZ + rBW);
@@ -284,6 +284,29 @@ public:
 
     cudaMemcpy(pPhiA , d_PhiA   , num_bytes * sizeof(double)    , cudaMemcpyDeviceToHost);
   }
+#else
+  virtual void PrepareCUDA() {
+    prinf("Error: CUDA support was dissabled during compile time\n");
+  }
+
+  virtual void FinishCUDA() {
+    prinf("Error: CUDA support was dissabled during compile time\n");
+  }
+
+  /**
+  * Executes the solver with CUDA
+  **/
+  virtual void ExecuteCUDA() {
+    prinf("Error: CUDA support was dissabled during compile time\n");
+  }
+
+  /**
+  * Executes the solver with CUDA
+  **/
+  virtual void ExecuteSimpleCUDA() {
+    prinf("Error: CUDA support was dissabled during compile time\n");
+  }
+#endif
 
   /**
    * Performs the bfecc operation over a given element

@@ -1,3 +1,4 @@
+#ifdef USE_CUDA
 #include "cuda_runtime.h"
 #include "device_launch_parameters.h"
 
@@ -6,7 +7,7 @@
 void __device__ InterpolateCUDA(
     double * Coords, double * in, double * out, 
     const double &idx, const int &N) {
-  
+
   int pi, pj, pk, ni, nj, nk;
 
   for (int d = 0; d < 3; d++)
@@ -101,3 +102,5 @@ __global__ void EccCUDA(
     InterpolateCUDA(dsp, PhiAux, &out[__GETINDEX(i, j, k)], idx, N);
   }
 }
+
+#endif
