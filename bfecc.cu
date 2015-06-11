@@ -155,8 +155,8 @@ int main(int argc, char *argv[]) {
 
   if (test == 0) {
     AdvectonStep.PrepareCUDA();
-	  for (int i = 0; i < steeps; i++) {
-		  AdvectonStep.ExecuteCUDA();
+    for (int i = 0; i < steeps; i++) {
+      AdvectonStep.ExecuteCUDA();
       // if (OutputStep == 0) {
       //   io.WriteGidResults(step0,N,N,N,i);
       //   OutputStep = 200;
@@ -166,14 +166,14 @@ int main(int argc, char *argv[]) {
     AdvectonStep.FinishCUDA();
   } else {
     for (int i = 0; i < steeps; i++) {
-			AdvectonStep.Execute();
-			// if (OutputStep == 0) {
-			// 	io.WriteGidResults(step0,N,N,N,i);
-			// 	OutputStep = 200;
-			// }
-			// OutputStep--;
-		}
-	}
+      AdvectonStep.Execute();
+      // if (OutputStep == 0) {
+      //   io.WriteGidResults(step0,N,N,N,i);
+      //   OutputStep = 200;
+      // }
+      // OutputStep--;
+    }
+  }
   }
 
 #ifndef _WIN32
