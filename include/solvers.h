@@ -49,7 +49,7 @@ public:
       pPhiC(block->pPhiC),
       pVelocity(block->pVelocity),
       rDx(block->rDx),
-      rIdx(1.0/block->rDx),
+      rIdx(1.0f/block->rDx),
       rDt(block->rDt),
       rBW(block->rBW),
       rBWP(block->rBW/2),
@@ -78,21 +78,21 @@ public:
       for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
         for(uint j = rBWP; j < rY + rBWP; j++)
           for(uint i = rBWP; i < rX + rBWP; i++)
-            Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
+            Apply(pPhiB,pPhiA,pPhiA,-1.0f,0.0f,1.0f,i,j,k);
 
       #pragma omp barrier
 
       for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
         for(uint j = rBWP; j < rY + rBWP; j++)
           for(uint i = rBWP; i < rX + rBWP; i++)
-            Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
+            Apply(pPhiC,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
 
       #pragma omp barrier
 
       for(uint k = rBWP + tid; k < rZ + rBWP; k+= tsize)
         for(uint j = rBWP; j < rY + rBWP; j++)
           for(uint i = rBWP; i < rX + rBWP; i++)
-            Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
+            Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
     }
   }
 
@@ -112,7 +112,7 @@ public:
             for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
               for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
                 for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
-                  Apply(pPhiB,pPhiA,pPhiA,-1.0,0.0,1.0,i,j,k);
+                  Apply(pPhiB,pPhiA,pPhiA,-1.0f,0.0f,1.0f,i,j,k);
 
       #pragma omp barrier
 
@@ -122,7 +122,7 @@ public:
             for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
               for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
                 for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
-                  Apply(pPhiC,pPhiA,pPhiB,1.0,1.5,-0.5,i,j,k);
+                  Apply(pPhiC,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
 
       #pragma omp barrier
      
@@ -132,7 +132,7 @@ public:
             for(uint k = std::max(rBWP,(kk * rNE)); k < std::min(rNE*rNB-rBWP,((kk+1) * rNE)); k++)
               for(uint j = std::max(rBWP,(jj * rNE)); j < rBWP + std::min(rNE*rNB-rBWP,((jj+1) * rNE)); j++)
                 for(uint i = std::max(rBWP,(ii * rNE)); i < rBWP + std::min(rNE*rNB-rBWP,((ii+1) * rNE)); i++)
-                  Apply(pPhiA,pPhiA,pPhiC,-1.0,0.0,1.0,i,j,k);
+                  Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
     }
   }
 
@@ -207,11 +207,11 @@ public:
       cudaMemcpyAsync(d_itr_vel, itr_vel, chunk_size * sizeof(double) * 3, cudaMemcpyHostToDevice, dstream1[c]);
       cudaMemcpyAsync(d_itr_phi, itr_phi, chunk_size * sizeof(double), cudaMemcpyHostToDevice, dstream1[c]);
 
-      BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
+      BackCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiB, d_PhiA, d_vel, rDx, rIdx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-1) * ELZ);
       if (c > 1) {
-        ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
+        ForthCUDA<<< threads, blocks, 0, dstream1[c] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rIdx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-2) * ELZ);
         if (c > 2) {
-          EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
+          EccCUDA <<< threads, blocks, 0, dstream1[c] >>>(d_PhiA, d_PhiC, d_vel, rDx, rIdx, rDt, rX + rBW, 0 * ELX, 0 * ELY, (c-3) * ELZ);
         }
       }
     }
@@ -223,11 +223,11 @@ public:
     }
 
     for (int c = BBZ - 1; c < BBZ; c++) {
-      BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+      BackCUDA <<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiB, d_PhiA, d_vel, rDx, rIdx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
     }
 
     for (int c = BBZ - 2; c < BBZ; c++) {
-      ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+      ForthCUDA<<< threads, blocks, 0, dstream1[(BBZ)] >>>(d_PhiC, d_PhiA, d_PhiB, d_vel, rDx, rIdx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
     }
 
     // This needs to be implemented with events, since extrange rance conditions are present
@@ -240,7 +240,7 @@ public:
       if (c > 1)
         cudaStreamWaitEvent(dstream1[(BBZ - 3 + c - 2)], trail_eec[c - 2], 0);
 
-      EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, 1/rDx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
+      EccCUDA  <<< threads, blocks, 0, dstream1[(BBZ - 3 + c)] >>>(d_PhiA, d_PhiC, d_vel, rDx, rIdx, rDt, rX + rBW, 0 * ELX, 0 * ELY, c * ELZ);
       cudaEventRecord(trail_eec[c - 1], dstream1[(BBZ - 3 + c)]);
       cudaMemcpyAsync(itr_phi_res, d_itr_phi_res, chunk_size * sizeof(double), cudaMemcpyDeviceToHost, dstream1[(BBZ - 3 + c)]);
       itr_phi_res += chunk_size;
@@ -270,7 +270,7 @@ public:
     for (int i = 0; i < BBX; i++)
       for (int j = 0; j < BBY; j++)
         for (int k = 0; k < BBZ; k++)
-          BackCUDA <<< threads, blocks >>>(d_PhiB, d_PhiA, d_vel, rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
+          BackCUDA <<< threads, blocks >>>(d_PhiB, d_PhiA, d_vel, rDx, 1.0f/rDx, rDt, rX + rBW, i * ELX, j * ELY, k * ELZ);
 
     for (int i = 0; i < BBX; i++)
       for (int j = 0; j < BBY; j++)
