@@ -73,8 +73,6 @@ public:
 #endif
       }
     }
-
-    free(*grid);
   }
 private:
   bool use_cuda_pinned_mem;
