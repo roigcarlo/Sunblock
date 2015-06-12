@@ -38,9 +38,9 @@ public:
 
     Utils::GlobalToLocal(Coords,block->rIdx);
 
-    pi = (uint)floor(Coords[0]); ni = pi + 1;
-  	pj = (uint)floor(Coords[1]); nj = pj + 1;
-  	pk = (uint)floor(Coords[2]); nk = pk + 1;
+    pi = (uint)floor(Coords[0]);
+  	pj = (uint)floor(Coords[1]);
+  	pk = (uint)floor(Coords[2]);
 
     double Nx, Ny, Nz;
 

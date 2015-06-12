@@ -20,29 +20,10 @@ template <
   typename BlockType,
   typename InterpolateType
 >
-class Solver {
-public:
-  Solver(){}
-  ~Solver(){}
-
-  virtual void Execute(){}
-  virtual void ExecuteBlock(){}
-  virtual void ExecuteCUDA(){}
-  virtual void ExecuteSimpleCUDA(){}
-
-};
-
-template <
-  typename ResultType, 
-  typename IndexType,
-  typename BlockType,
-  typename InterpolateType
->
-class BfeccSolver : public Solver<ResultType,IndexType,BlockType,InterpolateType> {
+class BfeccSolver {
 public:
 
-  BfeccSolver(BlockType * block) :
-      Solver<ResultType,IndexType,BlockType,InterpolateType>(),
+  BfeccSolver(BlockType * block, const double& Dt) :
       pBlock(block),
       pPhiA(block->pPhiA),
       pPhiB(block->pPhiB), 
@@ -50,7 +31,7 @@ public:
       pVelocity(block->pVelocity),
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
-      rDt(block->rDt),
+      rDt(Dt),
       rBW(block->rBW),
       rBWP(block->rBW/2),
       rX(block->rX),
@@ -65,10 +46,16 @@ public:
 
   }
 
+  void Prepare() {
+  }
+
+  void Finish() {
+  }
+
   /**
-   * Executes the solver using CPU resources without blocking
+   * Executes the solver in parallel
    **/
-  virtual void Execute() {
+  void Execute() {
 
     #pragma omp parallel
     {
@@ -97,9 +84,9 @@ public:
   }
 
   /**
-   * Executes the solver using blocking
+   * Executes the solver in parallel using blocking
    **/
-  virtual void ExecuteBlock() {
+  void ExecuteBlock() {
 
     #pragma omp parallel
     {
@@ -136,8 +123,79 @@ public:
     }
   }
 
+  /**
+   * Performs the bfecc operation over a given element
+   * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
+   * weightA: weigth of the first  operator (A)
+   * weightB: weigth of the second operator (B)
+   * @i,j,k:  Index of the cell
+   **/ 
+  void Apply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
+      const double &Sign, const double &WeightA, const double &WeightB,
+      const uint &i, const uint &j, const uint &k) {
+
+    uint cell = IndexType::GetIndex(pBlock,i,j,k);
+    
+    VariableType    iPhi;
+    Variable3DType  origin;
+    Variable3DType  displacement;
+
+    origin[0] = i * rDx;
+    origin[1] = j * rDx;
+    origin[2] = k * rDx;
+
+    for(int d = 0; d < 3; d++) {
+      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
+    }
+
+    InterpolateType::Interpolate(pBlock,PhiAuxB,&iPhi,displacement);
+
+    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
+  }
+
+private:
+
+  BlockType * pBlock;
+
+  ResultType * pPhiA;
+  ResultType * pPhiB;
+  ResultType * pPhiC;
+
+  Variable3DType * pVelocity;
+
+  const double & rDx;
+  const double rIdx;
+  const double & rDt;
+
+  const uint & rBW;
+  const uint rBWP;
+
+  const uint & rX; 
+  const uint & rY; 
+  const uint & rZ;
+
+  const uint & rNB;
+  const uint & rNE;
+   
+};
+
 #ifdef USE_CUDA
-  virtual void PrepareCUDA() {
+template <
+  typename ResultType, 
+  typename IndexType,
+  typename BlockType,
+  typename InterpolateType
+>
+class BfeccSolverCUDA : public BfeccSolver<ResultType,IndexType,BlockType,InterpolateType> {
+public:
+
+  BfeccSolver(BlockType * block) : BfeccSolver<ResultType,IndexType,BlockType,InterpolateType>(block) {
+  }
+
+  ~BfeccSolver() {
+  }
+
+  void Prepare() {
 
     num_bytes = (rX + rBW) * (rY + rBW) * (rZ + rBW);
 
@@ -158,7 +216,7 @@ public:
     cudaMemset(d_PhiC, 0, num_bytes * sizeof(double));
   }
 
-  virtual void FinishCUDA() {
+  void Finish() {
 
     for (int c = 0; c < BBZ + 2; c++) {
       cudaStreamDestroy(dstream1[c]);
@@ -179,7 +237,7 @@ public:
   /**
   * Executes the solver with CUDA
   **/
-  virtual void ExecuteCUDA() {
+  void ExecuteCUDA() {
 
     dim3 threads(TILE_X, TILE_Y, TILE_Z);
     dim3 blocks(ELX / TILE_X, ELY / TILE_Y, ELZ / TILE_Z);
@@ -259,7 +317,7 @@ public:
   /**
   * Executes the solver with CUDA
   **/
-  virtual void ExecuteSimpleCUDA() {
+  void ExecuteSimpleCUDA() {
 
     dim3 threads(TILE_X, TILE_Y, TILE_Z);
     dim3 blocks(rX / TILE_X, rY / TILE_Y, rZ / TILE_Z);
@@ -284,59 +342,6 @@ public:
 
     cudaMemcpy(pPhiA , d_PhiA   , num_bytes * sizeof(double)    , cudaMemcpyDeviceToHost);
   }
-#else
-  virtual void PrepareCUDA() {
-    prinf("Error: CUDA support was dissabled during compile time\n");
-  }
-
-  virtual void FinishCUDA() {
-    prinf("Error: CUDA support was dissabled during compile time\n");
-  }
-
-  /**
-  * Executes the solver with CUDA
-  **/
-  virtual void ExecuteCUDA() {
-    prinf("Error: CUDA support was dissabled during compile time\n");
-  }
-
-  /**
-  * Executes the solver with CUDA
-  **/
-  virtual void ExecuteSimpleCUDA() {
-    prinf("Error: CUDA support was dissabled during compile time\n");
-  }
-#endif
-
-  /**
-   * Performs the bfecc operation over a given element
-   * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
-   * weightA: weigth of the first  operator (A)
-   * weightB: weigth of the second operator (B)
-   * @i,j,k:  Index of the cell
-   **/ 
-  void Apply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
-      const double &Sign, const double &WeightA, const double &WeightB,
-      const uint &i, const uint &j, const uint &k) {
-
-    uint cell = IndexType::GetIndex(pBlock,i,j,k);
-    
-    VariableType    iPhi;
-    Variable3DType  origin;
-    Variable3DType  displacement;
-
-    origin[0] = i * rDx;
-    origin[1] = j * rDx;
-    origin[2] = k * rDx;
-
-    for(int d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
-    }
-
-    InterpolateType::Interpolate(pBlock,PhiAuxB,&iPhi,displacement);
-
-    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
-  }
 
 private:
 
@@ -346,37 +351,16 @@ private:
   int ELY;
   int ELZ;
 
-  BlockType * pBlock;
-
-  ResultType * pPhiA;
-  ResultType * pPhiB;
-  ResultType * pPhiC;
-
-  double * d_PhiA = 0;
-  double * d_PhiB = 0;
-  double * d_PhiC = 0;
-  double * d_vel = 0;
+  double * d_PhiA;
+  double * d_PhiB;
+  double * d_PhiC;
+  double * d_vel;
 
   cudaStream_t dstream1[BBZ + 2];
   cudaEvent_t trail_eec[3];
-
-  Variable3DType * pVelocity;
-
-  const double & rDx;
-  const double rIdx;
-  const double & rDt;
-
-  const uint & rBW;
-  const uint rBWP;
-
-  const uint & rX; 
-  const uint & rY; 
-  const uint & rZ;
-
-  const uint & rNB;
-  const uint & rNE;
    
 };
+#endif
 
 // This does not belong here! put it in a class
 template <typename T>

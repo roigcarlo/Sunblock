@@ -11,7 +11,7 @@ class Block {
 public:
   Block(ResultType * PhiA, ResultType * PhiB, ResultType * PhiC,
       Variable3DType * Field,
-      const double &Dx, const double &Dt, const double &Omega,
+      const double &Dx, const double &Omega,
       const uint &BW,
       const uint &X, const uint &Y, const uint &Z,
       const uint &NB, const uint &NE) :
@@ -21,7 +21,6 @@ public:
     pVelocity(Field),
     rDx(Dx),
     rIdx(1.0/Dx),
-    rDt(Dt),
     rOmega(Omega),
     rBW(BW),
     rBWP(BW/2),
@@ -66,9 +65,9 @@ public:
     }
   }
 
-  double InitializeVelocity() {
+  double InitializeVelocity(double &maxv) {
 
-    double maxv = -1;
+    maxv = -1;
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
@@ -97,11 +96,11 @@ public:
   }
 
   void WriteHeatFocus() {
-    uint Xc, Yc, Zc;
+      uint Xc, Yc, Zc;
 
     Xc = (uint)(2.0 / 5.0 * (rX));
-	Yc = (uint)(2.0 / 5.5 * (rY));
-	Zc = (uint)(1.0 / 2.0 * (rZ));
+  	Yc = (uint)(2.0 / 5.5 * (rY));
+  	Zc = (uint)(1.0 / 2.0 * (rZ));
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
@@ -134,7 +133,6 @@ public:
 
   const double & rDx;
   const double rIdx;
-  const double & rDt;
   const double & rOmega;
 
   const uint & rBW;

@@ -8,60 +8,77 @@
 #include "block.h"
 #include "hacks.h"
 
-template <typename T>
-void AllocateGrid(T ** grid,
-    const uint &X, const uint &Y, const uint &Z) {
+class MemManager {
+public:
 
-  *grid = (T *)malloc(sizeof(T) * 
-    (X+BW) * (Y+BW) * (Z+BW));
-}
+  MemManager(bool pinned_option = false){
+    use_cuda_pinned_mem = pinned_option;
+  }
 
-template <typename T>
-void AllocateGrid(T * grid,
-    const uint &X, const uint &Y, const uint &Z, const uint &align) {
+  ~MemManager(){}
 
-  uint size = (X+BW) * (Y+BW) * (Z+BW);
+  template <typename T>
+  void AllocateGrid(T ** grid, const uint &X, const uint &Y, const uint &Z, const uint align) {
 
-  while((sizeof(T) * size) % align) size++;
+    uint elements     = (X+BW) * (Y+BW) * (Z+BW);
+    uint element_size = sizeof(T);
 
-#ifdef _WIN32
-  *grid = (T *)_aligned_malloc(sizeof(T) * size,align);
+    uint size         = elements * element_size;
+
+    if(use_cuda_pinned_mem) {
+#ifdef USE_CUDA
+      cudaMallocHost((void**)grid, size);
 #else
-  *grid = (T *)memalign(align,sizeof(T) * size);
+      printf("Error: CUDA support is not enabled, please compile with -DUSE_CUDA.");
+      exit(1);
 #endif
-}
-
-template <typename T>
-void AllocateGridCUDA(T ** grid,
-	const uint &X, const uint &Y, const uint &Z) {
-
-  uint size = (X + BW) * (Y + BW) * (Z + BW);
-  cudaMallocHost((void**)grid, sizeof(T) * size);
-}
-
-template <typename T>
-void ReleaseGrid(T * grid) {
-
-  free(*grid);
-}
-
-template <typename T>
-void ReleaseGridCUDA(T * grid) {
-
-	cudaFreeHost(*grid);
-}
-
-template <typename T>
-void ReleaseGrid(T * grid, const uint &align) {
-  
-// Memory allocated with _aligned_malloc cannot be 
-//  released using free. 
+    } else {
+      if(align < 1) {
+        printf("Error: Trying to align memory to negative values.");
+        exit(1);
+      } else if( align == 1) {
+        *grid = (T *)malloc(size);
+      } else {
+        while((sizeof(T) * size) % align) size++;
 #ifdef _WIN32
-  _aligned_free(*grid);
+          *grid = (T *)_aligned_malloc(size,align);
 #else
-  free(*grid);
+          *grid = (T *)memalign(align,size);
 #endif
-}
+      }
+    }
+  }
+
+  template <typename T>
+  void ReleaseGrid(T * grid, const uint align) {
+
+    if(use_cuda_pinned_mem) {
+#ifdef USE_CUDA
+      cudaFreeHost(*grid);
+#else
+      printf("Error: CUDA support is not enabled, please compile with -DUSE_CUDA.");
+      exit(1);
+#endif
+    } else {
+      if(align < 1) {
+        printf("Error: Trying to align memory to negative values.");
+        exit(1);
+      } else if( align == 1) {
+        free(*grid);
+      } else {
+#ifdef _WIN32
+        _aligned_free(*grid);
+#else
+        free(*grid);
+#endif
+      }
+    }
+
+    free(*grid);
+  }
+private:
+  bool use_cuda_pinned_mem;
+};
 
 // Index calculation
 class Indexer {

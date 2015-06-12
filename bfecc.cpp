@@ -15,10 +15,10 @@
 #include "include/file_io.h"
 #include "include/interpolator.h"
 
-uint N          = 0;
-uint NB         = 0;
-uint NE         = 0;
-uint OutputStep = 0;
+uint N          =  0;
+uint NB         =  0;
+uint NE         =  0;
+uint OutputStep =  0;
 
 double dx       =  0.0;
 double idx      =  0.0;
@@ -29,36 +29,11 @@ double maxv     =  0.0;
 double CFL      =  1.0;
 double cellSize =  1.0;
 
-typedef Indexer IndexType;
-// typedef MortonIndexer IndexType;
-typedef Block<VariableType,IndexType> BlockType;
-typedef TrilinealInterpolator<VariableType,IndexType,BlockType>  InterpolateType;
+typedef Indexer                                                       IndexType;
+// typedef MortonIndexer                                                 IndexType;
+typedef Block<VariableType,IndexType>                                 BlockType;
+typedef TrilinealInterpolator<VariableType,IndexType,BlockType>       InterpolateType;
 typedef BfeccSolver<VariableType,IndexType,BlockType,InterpolateType> BfeccSolverType;
-
-template <typename U>
-void precalculateBackAndForw(U * fieldA, U * backward, U * forward,
-    const uint &X, const uint &Y, const uint &Z) {
-
-  Variable3DType origin;
-
-  for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
-    for(uint j = BWP; j < Y + BWP; j++) {
-      for(uint i = BWP; i < X + BWP; i++) {
-        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
-
-        origin[0] = i;
-        origin[1] = j;
-        origin[2] = k;
-
-        for(int d = 0; d < 3; d++) {
-          backward[cell][d] = origin[d]*h-fieldA[cell][d]*dt;
-          forward[cell][d]  = origin[d]*h+fieldA[cell][d]*dt;
-        }
-      }
-    }
-  }
-
-}
 
 template <typename T>
 void difussion(T * &gridA, T * &gridB,
@@ -76,6 +51,13 @@ void difussion(T * &gridA, T * &gridB,
 
 int main(int argc, char *argv[]) {
 
+#ifndef _WIN32
+  struct timeval start, end;
+#else
+  int start, end;
+#endif
+  double duration = 0.0;
+
   N           = atoi(argv[1]);
   int steeps  = atoi(argv[2]);
   h           = atoi(argv[3]);
@@ -86,56 +68,49 @@ int main(int argc, char *argv[]) {
   dx          = h/N;
   idx         = 1.0/dx;
 
-#ifndef _WIN32
-  struct timeval start, end;
-#else
-  int start, end;
-#endif
-
   IndexType::PreCalculateIndexTable(N+BW);
 
   FileIO<VariableType> io("grid",N);
 
-  BlockType * block = NULL;
+  BlockType      * block = NULL;
 
-  VariableType * step0 = NULL;
-  VariableType * step1 = NULL;
-  VariableType * step2 = NULL;
+  VariableType   * step0 = NULL;
+  VariableType   * step1 = NULL;
+  VariableType   * step2 = NULL;
 
   Variable3DType * velf0 = NULL;
   Variable3DType * velf1 = NULL;
   Variable3DType * velf2 = NULL;
 
-  double duration = 0.0;
+  MemManager memmrg(false);
 
   // Temperature
-  AllocateGridCUDA(&step0, N, N, N);
-  AllocateGridCUDA(&step1, N, N, N);
-  AllocateGridCUDA(&step2, N, N, N);
+  memmrg.AllocateGrid(&step0, N, N, N, 1);
+  memmrg.AllocateGrid(&step1, N, N, N, 1);
+  memmrg.AllocateGrid(&step2, N, N, N, 1);
 
   // Velocity
-  AllocateGridCUDA(&velf0, N, N, N);
-  AllocateGridCUDA(&velf1, N, N, N);
-  AllocateGridCUDA(&velf2, N, N, N);
+  memmrg.AllocateGrid(&velf0, N, N, N, 1);
+  memmrg.AllocateGrid(&velf1, N, N, N, 1);
+  memmrg.AllocateGrid(&velf2, N, N, N, 1);
 
   printf("Allocation correct\n");
   printf("Initialize\n");
 
-  block = new BlockType(step0,step1,step2,velf0,dx,dt,omega,BW,N,N,N,NB,NE);
+  block = new BlockType(step0,step1,step2,velf0,dx,omega,BW,N,N,N,NB,NE);
 
   block->InitializeVariable();
-  maxv = block->InitializeVelocity();
+  block->InitializeVelocity(maxv);
   block->WriteHeatFocus();
 
   dt = 0.0018;// *CFL*h / maxv;
-
   printf("CFL: %f \t Dt: %f\n", CFL, dt);
+
+  BfeccSolverType AdvectionSolver(block,dt);
 
   //io.WriteGidMesh(step0,N,N,N);
   //io.WriteGidResults(step0, N, N, N, 0);
   //OutputStep = 200;
-  
-  BfeccSolverType AdvectonStep(block);
   
   #pragma omp parallel
   #pragma omp single
@@ -151,30 +126,16 @@ int main(int argc, char *argv[]) {
   start = GetTickCount(); // At Program Start
 #endif
 
-  int test = 0;
-
-  if (test == 0) {
-    AdvectonStep.PrepareCUDA();
-    for (int i = 0; i < steeps; i++) {
-      AdvectonStep.ExecuteCUDA();
-      // if (OutputStep == 0) {
-      //   io.WriteGidResults(step0,N,N,N,i);
-      //   OutputStep = 200;
-      // }
-      // OutputStep--;
-    }
-    AdvectonStep.FinishCUDA();
-  } else {
-    for (int i = 0; i < steeps; i++) {
-      AdvectonStep.Execute();
-      // if (OutputStep == 0) {
-      //   io.WriteGidResults(step0,N,N,N,i);
-      //   OutputStep = 200;
-      // }
-      // OutputStep--;
-    }
+  AdvectionSolver.Prepare();
+  for (int i = 0; i < steeps; i++) {
+    AdvectionSolver.Execute();
+    // if (OutputStep == 0) {
+    //   io.WriteGidResults(step0,N,N,N,i);
+    //   OutputStep = 200;
+    // }
+    // OutputStep--;
   }
-  }
+  AdvectionSolver.Finish();
 
 #ifndef _WIN32
   gettimeofday(&end, NULL);
@@ -189,13 +150,13 @@ int main(int argc, char *argv[]) {
 
   free(block);
 
-  ReleaseGridCUDA(&step0);
-  ReleaseGridCUDA(&step1);
-  ReleaseGridCUDA(&step2);
+  memmrg.ReleaseGrid(&step0, 1);
+  memmrg.ReleaseGrid(&step1, 1);
+  memmrg.ReleaseGrid(&step2, 1);
 
-  ReleaseGridCUDA(&velf0);
-  ReleaseGridCUDA(&velf1);
-  ReleaseGridCUDA(&velf2);
+  memmrg.ReleaseGrid(&velf0, 1);
+  memmrg.ReleaseGrid(&velf1, 1);
+  memmrg.ReleaseGrid(&velf2, 1);
 
   IndexType::ReleaseIndexTable(N+BW);
 
