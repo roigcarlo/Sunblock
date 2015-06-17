@@ -2,13 +2,14 @@
 #define BLOCK_H
 
 #include "defines.h"
+#include "utils.h"
 
-template<
-  typename ResultType,
-  typename IndexType
-  >
 class Block {
 public:
+
+  typedef VariableType  ResultType;
+  typedef Indexer       IndexType;
+
   Block(ResultType * PhiA, ResultType * PhiB, ResultType * PhiC,
       Variable3DType * Field,
       const double &Dx, const double &Omega,
@@ -57,9 +58,9 @@ public:
     for(uint k = rBWP; k < rZ - rBWP; k++) {
       for(uint j = rBWP; j < rY - rBWP; j++) {
         for(uint i = rBWP; i < rX - rBWP; i++ ) {
-          pPhiA[IndexType::GetIndex(this,i,j,k)] = 0.0;
-          pPhiB[IndexType::GetIndex(this,i,j,k)] = 0.0;
-          pPhiC[IndexType::GetIndex(this,i,j,k)] = 0.0;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0;
+          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0;
+          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0;
         }
       }
     }
@@ -72,9 +73,9 @@ public:
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
-          pVelocity[IndexType::GetIndex(this,i,j,k)][0] = 0.0;
-          pVelocity[IndexType::GetIndex(this,i,j,k)][1] = 0.0;
-          pVelocity[IndexType::GetIndex(this,i,j,k)][2] = 0.0;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][0] = 0.0;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][1] = 0.0;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][2] = 0.0;
         } 
       }
     }
@@ -82,12 +83,12 @@ public:
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         for(uint i = rBWP; i < rX + rBWP; i++ ) {
-          pVelocity[IndexType::GetIndex(this,i,j,k)][0] = -rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(this,i,j,k)][1] =  rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(this,i,j,k)][2] =  0.0;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][0] = -rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][1] =  rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][2] =  0.0;
 
-          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(this,i,j,k)][0]),maxv);
-          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(this,i,j,k)][1]),maxv);
+          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][0]),maxv);
+          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][1]),maxv);
         }
       }
     }
@@ -110,7 +111,7 @@ public:
           double rr = pow(rX/6.0,2);  
           
           if(d2 < rr)
-            pPhiA[IndexType::GetIndex(this,i,j,k)] = 1.0 - d2/rr;
+            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 1.0 - d2/rr;
         }
       }
     }

@@ -1,14 +1,14 @@
+#ifndef INTERPOLATOR_H
+#define INTERPOLATOR_H
+
 #include "defines.h"
 
 // "The beast"
 
-template <
-  typename ResultType,
-  typename IndexType,
-  typename BlockType
-  >
 class Interpolator {
 public:
+
+  typedef Indexer       IndexType;
 
   Interpolator() {}
   ~Interpolator() {}
@@ -17,19 +17,15 @@ public:
   static void Interpolate(Variable3DType * OldPhi, Variable3DType * NewPhi, Variable3DType Coords) {}
 };
 
-template <
-  typename ResultType,
-  typename IndexType,
-  typename BlockType
-  >
-class TrilinealInterpolator : public Interpolator<ResultType,IndexType,BlockType> {
+
+class TrilinealInterpolator : public Interpolator {
 public:
 
   TrilinealInterpolator() {}
   ~TrilinealInterpolator() {}
 
   static void Interpolate(
-      BlockType * block,
+      Block * block,
       VariableType * OldPhi,
       VariableType * NewPhi,
       Variable3DType Coords) {
@@ -48,7 +44,7 @@ public:
     Ny = 1-(Coords[1] - pj);
     Nz = 1-(Coords[2] - pk);
 
-    uint cellIndex = IndexType::GetIndex(block,pi,pj,pk);
+    uint cellIndex = IndexType::GetIndex(pi,pj,pk,block->mPaddY,block->mPaddZ);
 
     (*NewPhi) = 0.0;
 
@@ -63,7 +59,7 @@ public:
   }
 
   static void Interpolate(
-      BlockType * block,
+      Block * block,
       Variable3DType * OldPhi,
       Variable3DType * NewPhi,
       Variable3DType Coords) {
@@ -84,14 +80,14 @@ public:
 
     for(int d = 0; d < 3; d++) {
       (*NewPhi)[d] = (
-        OldPhi[IndexType::GetIndex(block,pi,pj,pk)][d] * (    Nx) * (    Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(block,ni,pj,pk)][d] * (1 - Nx) * (    Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(block,pi,nj,pk)][d] * (    Nx) * (1 - Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(block,ni,nj,pk)][d] * (1 - Nx) * (1 - Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(block,pi,pj,nk)][d] * (    Nx) * (    Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(block,ni,pj,nk)][d] * (1 - Nx) * (    Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(block,pi,nj,nk)][d] * (    Nx) * (1 - Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(block,ni,nj,nk)][d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
+        OldPhi[IndexType::GetIndex(pi,pj,pk,block->mPaddY,block->mPaddZ)][d] * (    Nx) * (    Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(ni,pj,pk,block->mPaddY,block->mPaddZ)][d] * (1 - Nx) * (    Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(pi,nj,pk,block->mPaddY,block->mPaddZ)][d] * (    Nx) * (1 - Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(ni,nj,pk,block->mPaddY,block->mPaddZ)][d] * (1 - Nx) * (1 - Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(pi,pj,nk,block->mPaddY,block->mPaddZ)][d] * (    Nx) * (    Ny) * (1 - Nz) +
+        OldPhi[IndexType::GetIndex(ni,pj,nk,block->mPaddY,block->mPaddZ)][d] * (1 - Nx) * (    Ny) * (1 - Nz) +
+        OldPhi[IndexType::GetIndex(pi,nj,nk,block->mPaddY,block->mPaddZ)][d] * (    Nx) * (1 - Ny) * (1 - Nz) +
+        OldPhi[IndexType::GetIndex(ni,nj,nk,block->mPaddY,block->mPaddZ)][d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
       );
     }
   }
@@ -99,3 +95,5 @@ public:
 private:
 
 };
+
+#endif

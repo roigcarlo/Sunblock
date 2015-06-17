@@ -5,7 +5,6 @@
 #include <malloc.h>
 
 #include "defines.h"
-#include "block.h"
 #include "hacks.h"
 
 class MemManager {
@@ -85,9 +84,8 @@ public:
    * Calculates the standard index
    * @BW: BorderWidth
    **/
-  template<typename BlockType>
-  static uint GetIndex(BlockType * b, const uint &i, const uint &j, const uint &k) {
-    return k*b->mPaddZ+j*b->mPaddY+i;
+  static uint GetIndex(const uint &i, const uint &j, const uint &k, const uint &sY, const uint &sZ) {
+    return k*sZ+j*sY+i;
   }
 
   static void PreCalculateIndexTable(const uint &N) {
@@ -109,9 +107,9 @@ public:
    * @BW: BorderWidth
    **/
   template<typename BlockType>
-  static uint GetIndex(BlockType * b, const uint &i, const uint &j, const uint &k) {
+  static uint GetIndex(const uint &i, const uint &j, const uint &k, const uint &sY, const uint &sZ) {
     //return interleave64(i,j,k);
-    return pIndexTable[k*b->mPaddZ+j*b->mPaddY+i];
+    return pIndexTable[k*sZ+j*sY+i];
   }
 
   static void PreCalculateIndexTable(const uint &N) {
@@ -140,8 +138,7 @@ public:
    * Calculates the Peano index
    * @BW: BorderWidth
    **/
-  template<typename BlockType>
-  static uint GetIndex(BlockType * b, const uint &i, const uint &j, const uint &k) {
+  static uint GetIndex(const uint &i, const uint &j, const uint &k, const uint &sY, const uint &sZ) {
     // To be implemented
     return 0;
   }

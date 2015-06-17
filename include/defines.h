@@ -18,22 +18,22 @@ typedef unsigned int uint;
 #ifndef USE_DOUBLE
 #ifndef USE_FLOAT
 typedef double  VariableType;
-const uint BW            = 2;        //  Boundary width   ( needed if we want to use SIMD )
+const uint BW            	= 2;        //  Boundary width   ( needed if we want to use SIMD )
 #endif
 #endif
 
 #ifdef USE_DOUBLE
   typedef double  VariableType;
-  const uint BW            = 8;        //  Boundary width   ( needed if we want to use SIMD )
+  const uint BW            	= 8;        //  Boundary width   ( needed if we want to use SIMD )
 #endif
 
 #ifdef USE_FLOAT
   typedef float  VariableType;
-  const uint BW            = 16;       //  Boundary width   ( needed if we want to use SIMD )
+  const uint BW            	= 16;       //  Boundary width   ( needed if we want to use SIMD )
 #endif
 
-const uint BWP             = BW / 2;   //  Boundary padding ( needed if we want to use SIMD )
-const VariableType ONESIX = 1.0/6.0;  //  1/6
+const uint BWP             	= BW / 2;   //  Boundary padding ( needed if we want to use SIMD )
+const VariableType ONESIX 	= 1.0/6.0;  //  1/6
 
 typedef VariableType Variable3DType[3];
 

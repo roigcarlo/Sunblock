@@ -11,7 +11,8 @@
 #include "include/utils.h"
 #include "include/block.h"
 #include "include/defines.h"
-#include "include/solvers.h"
+#include "include/solver_stencil.h"
+#include "include/solver_bfecc.h"
 #include "include/file_io.h"
 #include "include/interpolator.h"
 
@@ -29,11 +30,17 @@ double maxv     =  0.0;
 double CFL      =  1.0;
 double cellSize =  1.0;
 
-typedef Indexer                                                       IndexType;
-// typedef MortonIndexer                                                 IndexType;
-typedef Block<VariableType,IndexType>                                 BlockType;
-typedef TrilinealInterpolator<VariableType,IndexType,BlockType>       InterpolateType;
-typedef BfeccSolver<VariableType,IndexType,BlockType,InterpolateType> BfeccSolverType;
+#define WRITE_INIT_R(_STEP_)          \
+io.WriteGidMesh(step0,N,N,N);         \
+io.WriteGidResults(step0, N, N, N, 0);\
+OutputStep = _STEP_;                  \
+
+#define WRITE_RESULT(_STEP_)          \
+if (OutputStep == 0) {                \
+  io.WriteGidResults(step0,N,N,N,i);  \
+  OutputStep = _STEP_;                \
+}                                     \
+OutputStep--;                         \
 
 template <typename T>
 void difussion(T * &gridA, T * &gridB,
@@ -68,11 +75,9 @@ int main(int argc, char *argv[]) {
   dx          = h/N;
   idx         = 1.0/dx;
 
-  IndexType::PreCalculateIndexTable(N+BW);
-
   FileIO<VariableType> io("grid",N);
 
-  BlockType      * block = NULL;
+  Block          * block = NULL;
 
   VariableType   * step0 = NULL;
   VariableType   * step1 = NULL;
@@ -97,7 +102,7 @@ int main(int argc, char *argv[]) {
   printf("Allocation correct\n");
   printf("Initialize\n");
 
-  block = new BlockType(step0,step1,step2,velf0,dx,omega,BW,N,N,N,NB,NE);
+  block = new Block(step0,step1,step2,velf0,dx,omega,BW,N,N,N,NB,NE);
 
   block->InitializeVariable();
   block->InitializeVelocity(maxv);
@@ -106,11 +111,9 @@ int main(int argc, char *argv[]) {
   dt = 0.0018;// *CFL*h / maxv;
   printf("CFL: %f \t Dt: %f\n", CFL, dt);
 
-  BfeccSolverType AdvectionSolver(block,dt);
+  BfeccSolver AdvectionSolver(block,dt);
 
-  //io.WriteGidMesh(step0,N,N,N);
-  //io.WriteGidResults(step0, N, N, N, 0);
-  //OutputStep = 200;
+  WRITE_INIT_R(200)
   
   #pragma omp parallel
   #pragma omp single
@@ -129,11 +132,7 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
-    // if (OutputStep == 0) {
-    //   io.WriteGidResults(step0,N,N,N,i);
-    //   OutputStep = 200;
-    // }
-    // OutputStep--;
+    WRITE_RESULT(200)
   }
   AdvectionSolver.Finish();
 
@@ -157,8 +156,6 @@ int main(int argc, char *argv[]) {
   memmrg.ReleaseGrid(&velf0, 1);
   memmrg.ReleaseGrid(&velf1, 1);
   memmrg.ReleaseGrid(&velf2, 1);
-
-  IndexType::ReleaseIndexTable(N+BW);
 
   printf("De-Allocation correct\n");
 

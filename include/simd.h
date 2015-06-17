@@ -3,9 +3,24 @@
 
 #include "defines.h"
 
+#ifdef USE_NOVEC
+    #define VEC_ERROR \
+        printf("Error: Explicit vectorization not enabled, please compile with USE_SSE2 or USE_AVX2 flags.\n");
+
+    #define ALIGN 1
+    #define VP    1
+    #define VADD(A,B)             (A) + (B)
+    #define VMUL(A,B)             (A) * (B)
+    #define VLOAD( A)             (A[0]) 
+    #define VSTORE(A,B)           (A[0]) = B
+    #define VFMA(A,B,C)           (((A) * (B)) + (C))
+
+    typedef double VectorType;
+    const VectorType mmONESIX = 1.0f/6.0f;
+#endif
 #ifdef USE_SSE2
   #ifdef USE_DOUBLE
-    #define ALING 16
+    #define ALIGN 16
     #define VP    2
     #define VADD(A,B)             _mm_add_pd((A),(B))
     #define VMUL(A,B)             _mm_mul_pd((A),(B))
@@ -18,7 +33,7 @@
   #endif
 
   #ifdef USE_FLOAT
-    #define ALING 16
+    #define ALIGN 16
     #define VP    4
     #define VADD(A,B)             _mm_add_ps((A),(B))
     #define VMUL(A,B)             _mm_mul_ps((A),(B))
@@ -32,7 +47,7 @@
 #endif
 #ifdef USE_AVX2
   #ifdef USE_DOUBLE
-    #define ALING 32
+    #define ALIGN 32
     #define VP    4
     #define VADD(A,B)             _mm256_add_pd((A),(B))
     #define VMUL(A,B)             _mm256_mul_pd((A),(B))
@@ -45,7 +60,7 @@
   #endif
 
   #ifdef USE_FLOAT
-    #define ALING 32
+    #define ALIGN 32
     #define VP    8
     #define VADD(A,B)             _mm256_add_ps((A),(B))
     #define VMUL(A,B)             _mm256_mul_ps((A),(B))
@@ -57,6 +72,7 @@
     const VectorType mmONESIX =   _mm256_set_ps(ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX,ONESIX);
   #endif
 #endif
+
 
 #define VSTENSMP(L,R,T,B,F,K) VMUL(VADD(VADD(VADD((L),(R)),VADD((T),(B))),VADD((F),(K))),mmONESIX);
 #define VSTENFMA(L,R,T,B,F,K) VFMA(VADD(VADD((L),(R)),VADD((T),(B))),VADD((F),(K)),mmONESIX);
