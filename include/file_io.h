@@ -5,12 +5,16 @@
 
 #include "hacks.h"
 
+// GiD IO
+#include "gidpost/source/gidpost.h"
+
 template <typename T>
 class FileIO {
 private:
 
   std::stringstream name_mesh;
   std::stringstream name_post;
+  std::stringstream name_raw;
 
   std::ofstream * mesh_file;
   std::ofstream * post_file;
@@ -48,16 +52,22 @@ public:
     SetMeshName(name,N);
     setPostName(name,N);
 
+    name_raw << name;
+
+    // GiD_OpenPostMeshFile(name_mesh.str().c_str(), GiD_PostAscii);
+    GiD_OpenPostResultFile(name_post.str().c_str(), GiD_PostBinary);
+
     mesh_file = new std::ofstream(name_mesh.str().c_str());
     post_file = new std::ofstream(name_post.str().c_str());
-
-    PreparePostFile();
   };
 
   ~FileIO() {
 
     mesh_file->close();
     post_file->close();
+
+    // GiD_ClosePostMeshFile();
+    GiD_ClosePostResultFile();
 
     delete mesh_file;
     delete post_file;
@@ -191,4 +201,74 @@ public:
 
     (*post_file) << "End Values" << std::endl;
   }
+
+
+  /**
+   * Writes the mesh in GiD format.
+   * @grid:     Value of the grid in Local or Global coordinatr system
+   * @X:        X-Size of the grid
+   * @Y:        Y-Size of the grid
+   * @Z:        Z-Size of the grid
+   **/
+  void WriteGidMeshBin(T * grid, 
+      const uint &X, const uint &Y, const uint &Z) {
+
+    int elemi[8];
+
+    GiD_BeginMesh(name_raw.str().c_str(), GiD_3D, GiD_Hexahedra, 8);
+
+    GiD_BeginCoordinates();
+    for(uint k = 0; k < Z + BW; k++) {
+      for(uint j = 0; j < Y + BW; j++) {
+        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
+        for(uint i = 0; i < X + BW; i++) {
+          GiD_WriteCoordinates(cell++, i, j, k); 
+        }
+      }
+    }
+    GiD_EndCoordinates();
+ 
+    GiD_BeginElements();
+    for(uint k = BWP; k < Z + BWP; k++) {
+      for(uint j = BWP; j < Y + BWP; j++) {
+        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
+        for(uint i = BWP; i < X + BWP; i++) {
+          elemi[0] = cell;                        elemi[1] = cell+1;
+          elemi[2] = cell+1+(Y+BW);               elemi[3] = cell+(Y+BW);
+          elemi[4] = cell+(Z+BW)*(Y+BW);          elemi[5] = cell+1+(Z+BW)*(Y+BW);
+          elemi[6] = cell+1+(Z+BW)*(Y+BW)+(Y+BW); elemi[7] = cell+(Z+BW)*(Y+BW)+(Y+BW);
+
+          GiD_WriteElementMat(cell++, elemi);
+        }
+      }
+    }
+
+    GiD_EndElements();
+    GiD_EndMesh();
+  }
+
+  /**
+   * Writes the results in GiD format.
+   * @grid:     Value of the grid in Local or Global coordinatr system
+   * @X:        X-Size of the grid
+   * @Y:        Y-Size of the grid
+   * @Z:        Z-Size of the grid
+   * @step:     Step of the result
+   **/
+  void WriteGidResultsBin(T * grid, 
+      const uint &X, const uint &Y, const uint &Z, int step) {
+
+    GiD_BeginResult("var", "var", step, GiD_Scalar, GiD_OnNodes, NULL, NULL, 0, NULL);
+    for(uint k = 0; k < Z + BW; k++) {
+      for(uint j = 0; j < Y + BW; j++) {
+        for(uint i = 0; i < X + BW; i++) {
+          uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+i;
+          uint cell = celln; //interleave64(i,j,k);
+          GiD_WriteScalar(celln, grid[cell]);
+        }
+      }
+    }
+    GiD_EndResult();
+  }
+
 };

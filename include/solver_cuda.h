@@ -15,7 +15,6 @@ public:
 
   BfeccSolverCUDA(BlockType * block, const double& Dt) : 
       Solver(block,Dt) {
-
   }
 
   ~BfeccSolverCUDA() {

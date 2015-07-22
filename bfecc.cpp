@@ -30,17 +30,17 @@ double maxv     =  0.0;
 double CFL      =  1.0;
 double cellSize =  1.0;
 
-#define WRITE_INIT_R(_STEP_)          \
-io.WriteGidMesh(step0,N,N,N);         \
-io.WriteGidResults(step0, N, N, N, 0);\
-OutputStep = _STEP_;                  \
+#define WRITE_INIT_R(_STEP_)              \
+io.WriteGidMeshBin(step0,N,N,N);          \
+io.WriteGidResultsBin(step0, N, N, N, 0); \
+OutputStep = _STEP_;                      \
 
-#define WRITE_RESULT(_STEP_)          \
-if (OutputStep == 0) {                \
-  io.WriteGidResults(step0,N,N,N,i);  \
-  OutputStep = _STEP_;                \
-}                                     \
-OutputStep--;                         \
+#define WRITE_RESULT(_STEP_)              \
+if (OutputStep == 0) {                    \
+  io.WriteGidResultsBin(step0,N,N,N,i);   \
+  OutputStep = _STEP_;                    \
+}                                         \
+OutputStep--;                             \
 
 template <typename T>
 void difussion(T * &gridA, T * &gridB,
@@ -113,7 +113,7 @@ int main(int argc, char *argv[]) {
 
   BfeccSolver AdvectionSolver(block,dt);
 
-  WRITE_INIT_R(200)
+  WRITE_INIT_R(20)
   
   #pragma omp parallel
   #pragma omp single
@@ -132,7 +132,7 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
-    WRITE_RESULT(200)
+    WRITE_RESULT(20)
   }
   AdvectionSolver.Finish();
 

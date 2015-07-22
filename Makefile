@@ -17,7 +17,7 @@ proxySolver.o: proxySolver.cpp
 	$(CC) -c proxySolver.cpp $(OMP) $(CXXFLAGS) $(CONFIG)
 
 bfecc: bfecc.o
-	$(CC) -o bfecc $(OMP) $(PROFILE) bfecc.o
+	$(CC) -o bfecc $(OMP) $(PROFILE) bfecc.o -L include/gidpost -lgidpost -lz
 
 bfecc.o: bfecc.cpp
 	$(CC) -c bfecc.cpp $(PROFILE) $(OMP) $(CXXSAFEF) $(CONFIG)
