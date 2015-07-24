@@ -30,30 +30,26 @@ double maxv     =  0.0;
 double CFL      =  1.0;
 double cellSize =  1.0;
 
-#define WRITE_INIT_R(_STEP_)              \
-io.WriteGidMeshBin(step0,N,N,N);          \
-io.WriteGidResultsBin(step0, N, N, N, 0); \
-OutputStep = _STEP_;                      \
+#define WRITE_INIT_R(_STEP_)                      \
+io.WriteGidMeshBin(N,N,N);                        \
+io.WriteGidResultsBin2D(step0,N,N,N,0,"TMP");     \
+io.WriteGidResultsBin3D(velf0,N,N,N,0,"VEL");     \
+OutputStep = _STEP_;                              \
 
-#define WRITE_RESULT(_STEP_)              \
-if (OutputStep == 0) {                    \
-  io.WriteGidResultsBin(step0,N,N,N,i);   \
-  OutputStep = _STEP_;                    \
-}                                         \
-OutputStep--;                             \
+#define WRITE_RESULT(_STEP_)                      \
+if (OutputStep == 0) {                            \
+  io.WriteGidResultsBin2D(step0,N,N,N,i,"TMP");   \
+  io.WriteGidResultsBin3D(velf0,N,N,N,i,"VEL");   \
+  OutputStep = _STEP_;                            \
+}                                                 \
+OutputStep--;                                     \
 
-template <typename T>
-void difussion(T * &gridA, T * &gridB,
-    const uint &X, const uint &Y, const uint &Z) {
+double calculateMaxDt_CFL(double CFL, double h, double maxv) {
+  return CFL*h / maxv;
+}
 
-  for(uint k = BWP + omp_get_thread_num(); k < Z + BWP; k+=omp_get_num_threads()) {
-    for(uint j = BWP; j < Y + BWP; j++) {
-      uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
-      for(uint i = BWP; i < X + BWP; i++) {
-        stencilCross(gridA,gridB,cell++,X,Y,Z);
-      } 
-    }
-  }
+double calculateMaxDt_Fourier() {
+  return 0.0;
 }
 
 int main(int argc, char *argv[]) {
@@ -75,7 +71,7 @@ int main(int argc, char *argv[]) {
   dx          = h/N;
   idx         = 1.0/dx;
 
-  FileIO<VariableType> io("grid",N);
+  FileIO io("grid",N);
 
   Block          * block = NULL;
 
@@ -97,7 +93,6 @@ int main(int argc, char *argv[]) {
   // Velocity
   memmrg.AllocateGrid(&velf0, N, N, N, 1);
   memmrg.AllocateGrid(&velf1, N, N, N, 1);
-  memmrg.AllocateGrid(&velf2, N, N, N, 1);
 
   printf("Allocation correct\n");
   printf("Initialize\n");
@@ -108,12 +103,13 @@ int main(int argc, char *argv[]) {
   block->InitializeVelocity(maxv);
   block->WriteHeatFocus();
 
-  dt = 0.0018;// *CFL*h / maxv;
+  dt = 0.0018;// calculateMaxDt_CFL(CFL,h,maxv);
   printf("CFL: %f \t Dt: %f\n", CFL, dt);
 
-  BfeccSolver AdvectionSolver(block,dt);
+  BfeccSolver   AdvectionSolver(block,dt);
+  StencilSolver DiffusionSolver(block,dt);
 
-  WRITE_INIT_R(20)
+  WRITE_INIT_R(steeps/10)
   
   #pragma omp parallel
   #pragma omp single
@@ -132,7 +128,8 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
-    WRITE_RESULT(20)
+    DiffusionSolver.Execute();
+    WRITE_RESULT(steeps/10)
   }
   AdvectionSolver.Finish();
 
@@ -155,7 +152,6 @@ int main(int argc, char *argv[]) {
 
   memmrg.ReleaseGrid(&velf0, 1);
   memmrg.ReleaseGrid(&velf1, 1);
-  memmrg.ReleaseGrid(&velf2, 1);
 
   printf("De-Allocation correct\n");
 

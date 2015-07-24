@@ -10,13 +10,14 @@ private:
       const uint &cell, 
       const uint &X, const uint &Y, const uint &Z) {
     
-    gridB[cell] = (
+    gridB[cell] = 1e-2 * (
       gridA[cell - 1]   +                       // Left
       gridA[cell + 1]   +                       // Right
       gridA[cell - (X+BW)]   +                  // Up
       gridA[cell + (X+BW)]   +                  // Down
       gridA[cell - (Y+BW)*(X+BW)] +             // Front
-      gridA[cell + (Y+BW)*(X+BW)] ) * ONESIX;   // Back
+      gridA[cell + (Y+BW)*(X+BW)] -             // Back
+      6 * gridA[cell]);                         // Self
   }
 
 
@@ -48,6 +49,16 @@ public:
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
           stencilCross(pPhiA,pPhiB,cell++,rX,rY,rZ);
+        } 
+      }
+    }
+
+    #pragma omp parallel for
+    for(uint k = rBWP; k < rZ + rBWP; k++) {
+      for(uint j = rBWP; j < rY + rBWP; j++) {
+        uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(uint i = rBWP; i < rX + rBWP; i++) {
+          pPhiA[cell] += pPhiB[cell]; cell++;
         } 
       }
     }
