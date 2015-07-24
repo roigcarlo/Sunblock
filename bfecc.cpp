@@ -80,19 +80,26 @@ int main(int argc, char *argv[]) {
   VariableType   * step1 = NULL;
   VariableType   * step2 = NULL;
 
+  VariableType   * pres0 = NULL;
+  VariableType   * pres1 = NULL;
+  VariableType   * pres2 = NULL;
+
   Variable3DType * velf0 = NULL;
-  Variable3DType * velf1 = NULL;
 
   MemManager memmrg(false);
 
-  // Temperature
+  // Variable
   memmrg.AllocateGrid(&step0, N, N, N, 1);
   memmrg.AllocateGrid(&step1, N, N, N, 1);
   memmrg.AllocateGrid(&step2, N, N, N, 1);
 
+  // Pressure
+  memmrg.AllocateGrid(&pres0, N, N, N, 1);
+  memmrg.AllocateGrid(&pres1, N, N, N, 1);
+  memmrg.AllocateGrid(&pres2, N, N, N, 1);
+
   // Velocity
   memmrg.AllocateGrid(&velf0, N, N, N, 1);
-  memmrg.AllocateGrid(&velf1, N, N, N, 1);
 
   printf("Allocation correct\n");
   printf("Initialize\n");
@@ -152,8 +159,11 @@ int main(int argc, char *argv[]) {
   memmrg.ReleaseGrid(&step1, 1);
   memmrg.ReleaseGrid(&step2, 1);
 
+  memmrg.ReleaseGrid(&pres0, 1);
+  memmrg.ReleaseGrid(&pres1, 1);
+  memmrg.ReleaseGrid(&pres2, 1);
+
   memmrg.ReleaseGrid(&velf0, 1);
-  memmrg.ReleaseGrid(&velf1, 1);
 
   printf("De-Allocation correct\n");
 
