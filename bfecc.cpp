@@ -29,6 +29,7 @@ double omega    =  1.0;
 double maxv     =  0.0;
 double CFL      =  1.0;
 double cellSize =  1.0;
+double diffTerm =  1e-5;
 
 #define WRITE_INIT_R(_STEP_)                      \
 io.WriteGidMeshBin(N,N,N);                        \
@@ -81,7 +82,6 @@ int main(int argc, char *argv[]) {
 
   Variable3DType * velf0 = NULL;
   Variable3DType * velf1 = NULL;
-  Variable3DType * velf2 = NULL;
 
   MemManager memmrg(false);
 
@@ -108,6 +108,8 @@ int main(int argc, char *argv[]) {
 
   BfeccSolver   AdvectionSolver(block,dt);
   StencilSolver DiffusionSolver(block,dt);
+
+  DiffusionSolver.SetDiffTerm(diffTerm);
 
   WRITE_INIT_R(steeps/10)
   

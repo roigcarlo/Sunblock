@@ -10,7 +10,7 @@ private:
       const uint &cell, 
       const uint &X, const uint &Y, const uint &Z) {
     
-    gridB[cell] = 1e-2 * (
+    gridB[cell] = mDiffTerm * (
       gridA[cell - 1]   +                       // Left
       gridA[cell + 1]   +                       // Right
       gridA[cell - (X+BW)]   +                  // Up
@@ -118,5 +118,13 @@ public:
     }
 
   }
+
+  void SetDiffTerm(double diffTerm) {
+    mDiffTerm = diffTerm;
+  }
+
+private:
+
+  double mDiffTerm;
 
 };
