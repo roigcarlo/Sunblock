@@ -80,8 +80,11 @@ public:
    * @Z:        Z-Size of the grid
    * @fileName: Name of the output file
    **/
-  void WriteGridWipe(VariableType * grid, 
-      const uint &X, const uint &Y, const uint &Z,
+  void WriteGridWipe(
+      PrecisionType * grid,
+      const uint &X,
+      const uint &Y,
+      const uint &Z,
       const char * fileName) {
 
     std::ofstream outputFile(fileName);
@@ -90,7 +93,7 @@ public:
       for(uint j = 0; j < Y + BW; j++) {
         for(uint i = 0; i < X + BW; i++) {
           outputFile << grid[k*(Y+BW)*(X+BW)+j*(X+BW)+i] << " ";
-        } 
+        }
         outputFile << std::endl;
       }
       outputFile << std::endl;
@@ -106,8 +109,11 @@ public:
    * @Z:        Z-Size of the grid
    * @fileName: Name of the output file
    **/
-  void WriteGrid(VariableType * grid, 
-      const uint &X, const uint &Y, const uint &Z,
+  void WriteGrid(
+      PrecisionType * grid,
+      const uint &X,
+      const uint &Y,
+      const uint &Z,
       const char * fileName) {
 
     std::ofstream outputFile(fileName,std::ofstream::app);
@@ -119,7 +125,7 @@ public:
       for(uint j = 0; j < Y + BW; j++) {
         for(uint i = 0; i < X + BW; i++) {
           outputFile << grid[k*(Y+BW)*(X+BW)+j*(X+BW)+i] << " ";
-        } 
+        }
         outputFile << std::endl;
       }
       outputFile << std::endl;
@@ -133,7 +139,10 @@ public:
    * @Y:        Y-Size of the grid
    * @Z:        Z-Size of the grid
    **/
-  void WriteGidMesh(const uint &X, const uint &Y, const uint &Z) {
+  void WriteGidMesh(
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
 
     (*mesh_file) << "MESH \"Grid\" dimension 3 ElemType Hexahedra Nnode 8" << std::endl;
     (*mesh_file) << "# color 96 96 96" << std::endl;
@@ -180,8 +189,12 @@ public:
    * @Z:        Z-Size of the grid
    * @step:     Step of the result
    **/
-  void WriteGidResults(VariableType * grid, 
-      const uint &X, const uint &Y, const uint &Z, int step) {
+  void WriteGidResults(
+      PrecisionType * grid,
+      const uint &X,
+      const uint &Y,
+      const uint &Z,
+      int step) {
 
     (*post_file) << "Result \"Temperature\" \"Kratos\" " << step << " Scalar OnNodes" << std::endl;
     (*post_file) << "Values" << std::endl;
@@ -206,7 +219,10 @@ public:
    * @Y:        Y-Size of the grid
    * @Z:        Z-Size of the grid
    **/
-  void WriteGidMeshBin(const uint &X, const uint &Y, const uint &Z) {
+  void WriteGidMeshBin(
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
 
     int elemi[8];
 
@@ -217,12 +233,12 @@ public:
       for(uint j = 0; j < Y + BW; j++) {
         uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
         for(uint i = 0; i < X + BW; i++) {
-          GiD_WriteCoordinates(cell++, i, j, k); 
+          GiD_WriteCoordinates(cell++, i, j, k);
         }
       }
     }
     GiD_EndCoordinates();
- 
+
     GiD_BeginElements();
     for(uint k = BWP; k < Z + BWP - 1; k++) {
       for(uint j = BWP; j < Y + BWP - 1; j++) {
@@ -250,8 +266,13 @@ public:
    * @Z:        Z-Size of the grid
    * @step:     Step of the result
    **/
-  void WriteGidResultsBin2D(VariableType * grid, 
-      const uint &X, const uint &Y, const uint &Z, int step, const char * name) {
+  void WriteGidResultsBin2D(
+      PrecisionType * grid,
+      const uint &X,
+      const uint &Y,
+      const uint &Z,
+      int step,
+      const char * name) {
 
     GiD_BeginResult(name, "Static", step, GiD_Scalar, GiD_OnNodes, NULL, NULL, 0, NULL);
     for(uint k = 0; k < Z + BW - 1; k++) {
@@ -274,16 +295,37 @@ public:
    * @Z:        Z-Size of the grid
    * @step:     Step of the result
    **/
-  void WriteGidResultsBin3D(Variable3DType * grid, 
-      const uint &X, const uint &Y, const uint &Z, int step, const char * name) {
+  void WriteGidResultsBin3D(
+      PrecisionType * grid,
+      const uint &X,
+      const uint &Y,
+      const uint &Z,
+      int step,
+      int dim,
+      const char * name) {
 
-    GiD_BeginResult(name, "Static", step, GiD_Vector, GiD_OnNodes, NULL, NULL, 0, NULL);
+    GiD_BeginResult(
+      name,
+      "Static",
+      step,
+      GiD_Vector,
+      GiD_OnNodes,
+      NULL,
+      NULL,
+      0,
+      NULL);
+
     for(uint k = 0; k < Z + BW - 1; k++) {
       for(uint j = 0; j < Y + BW - 1; j++) {
         for(uint i = 0; i < X + BW - 1; i++) {
           uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+i;
           uint cell = celln; //interleave64(i,j,k);
-          GiD_WriteVector(celln, grid[cell][0], grid[cell][1], grid[cell][2]);
+
+          GiD_WriteVector(
+            celln,
+            grid[cell*dim+0],
+            grid[cell*dim+1],
+            grid[cell*dim+2]);
         }
       }
     }

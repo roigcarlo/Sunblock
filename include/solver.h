@@ -12,14 +12,13 @@
 class Solver {
 public:
 
-  typedef Block::ResultType       ResultType;
   typedef Block::IndexType        IndexType;
   typedef TrilinealInterpolator   InterpolateType;
 
   Solver(Block * block, const double& Dt) :
       pBlock(block),
       pPhiA(block->pPhiA),
-      pPhiB(block->pPhiB), 
+      pPhiB(block->pPhiB),
       pPhiC(block->pPhiC),
       pVelocity(block->pVelocity),
       rDx(block->rDx),
@@ -31,8 +30,8 @@ public:
       rY(block->rY),
       rZ(block->rZ),
       rNB(block->rNB),
-      rNE(block->rNE) {
-
+      rNE(block->rNE),
+      rDim(block->rDim){
   }
 
   ~Solver() {
@@ -51,11 +50,11 @@ protected:
 
   Block * pBlock;
 
-  ResultType * pPhiA;
-  ResultType * pPhiB;
-  ResultType * pPhiC;
+  PrecisionType * pPhiA;
+  PrecisionType * pPhiB;
+  PrecisionType * pPhiC;
 
-  Variable3DType * pVelocity;
+  PrecisionType * pVelocity;
 
   const double & rDx;
   const double rIdx;
@@ -64,13 +63,15 @@ protected:
   const uint & rBW;
   const uint rBWP;
 
-  const uint & rX; 
-  const uint & rY; 
+  const uint & rX;
+  const uint & rY;
   const uint & rZ;
 
   const uint & rNB;
   const uint & rNE;
-   
+  
+  const uint & rDim;
+
 };
 
 #endif

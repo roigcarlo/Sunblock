@@ -7,17 +7,19 @@
 class Block {
 public:
 
-  typedef VariableType  ResultType;
-  typedef Indexer       IndexType;
+  typedef Indexer IndexType;
 
-  Block(ResultType * PhiA, ResultType * PhiB, ResultType * PhiC,
-      Variable3DType * Field,
+  Block(
+      PrecisionType * PhiA,
+      PrecisionType * PhiB,
+      PrecisionType * PhiC,
+      PrecisionType * Field,
       const double &Dx, const double &Omega,
       const uint &BW,
       const uint &X, const uint &Y, const uint &Z,
-      const uint &NB, const uint &NE) :
+      const uint &NB, const uint &NE, const uint &DIM) :
     pPhiA(PhiA),
-    pPhiB(PhiB), 
+    pPhiB(PhiB),
     pPhiC(PhiC),
     pVelocity(Field),
     rDx(Dx),
@@ -29,7 +31,8 @@ public:
     rY(Y),
     rZ(Z),
     rNB(NB),
-    rNE(NE) {
+    rNE(NE),
+    rDim(DIM) {
 
     mPaddZ = (rZ+rBW)*(rY+rBW);
     mPaddY = (rY+rBW);
@@ -54,13 +57,15 @@ public:
 
   ~Block() {}
 
-  void InitializeVariable() {
+  void Zero() {
     for(uint k = rBWP; k < rZ - rBWP; k++) {
       for(uint j = rBWP; j < rY - rBWP; j++) {
         for(uint i = rBWP; i < rX - rBWP; i++ ) {
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0;
-          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0;
-          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0;
+          for(uint d = 0; d < rDim; d++) {
+            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
+            pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
+            pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
+          }
         }
       }
     }
@@ -73,22 +78,22 @@ public:
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][0] = 0.0;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][1] = 0.0;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][2] = 0.0;
-        } 
+          for(uint d = 0; d < rDim; d++) {
+            pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
+          }
+        }
       }
     }
 
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         for(uint i = rBWP; i < rX + rBWP; i++ ) {
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][0] = -rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][1] =  rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][2] =  0.0;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = -rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] =  rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] =  0.0;
 
-          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][0]),maxv);
-          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)][1]),maxv);
+          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
         }
       }
     }
@@ -107,11 +112,14 @@ public:
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
 
-          double d2 = pow((Xc - (double)(i)),2) + pow((Yc - (double)(j)),2) + pow((Zc - (double)(k)),2); 
-          double rr = pow(rX/6.0,2);  
-          
-          if(d2 < rr)
-            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 1.0 - d2/rr;
+          double d2 = pow((Xc - (double)(i)),2) + pow((Yc - (double)(j)),2) + pow((Zc - (double)(k)),2);
+          double rr = pow(rX/6.0,2);
+
+          if(d2 < rr) {
+            for(uint d = 0; d < rDim; d++) {
+              pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 1.0 - d2/rr;
+            }
+          }
         }
       }
     }
@@ -126,11 +134,11 @@ public:
    * @dt:         diferential of time
    **/
 
-  ResultType * pPhiA;
-  ResultType * pPhiB;
-  ResultType * pPhiC;
+  PrecisionType * pPhiA;
+  PrecisionType * pPhiB;
+  PrecisionType * pPhiC;
 
-  Variable3DType * pVelocity;
+  PrecisionType * pVelocity;
 
   const double & rDx;
   const double rIdx;
@@ -139,12 +147,14 @@ public:
   const uint & rBW;
   const uint rBWP;
 
-  const uint & rX; 
-  const uint & rY; 
+  const uint & rX;
+  const uint & rY;
   const uint & rZ;
 
   const uint & rNB;
   const uint & rNE;
+  
+  const uint & rDim;
 
   uint mPaddZ;
   uint mPaddY;

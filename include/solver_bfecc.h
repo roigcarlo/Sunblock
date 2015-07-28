@@ -3,7 +3,7 @@
 class BfeccSolver : public Solver {
 public:
 
-  BfeccSolver(Block * block, const double& Dt) : 
+  BfeccSolver(Block * block, const double& Dt) :
       Solver(block,Dt) {
 
   }
@@ -106,7 +106,7 @@ public:
 
     #undef BOT
     #undef TOP
-    
+
   }
 
   /**
@@ -115,27 +115,36 @@ public:
    * weightA: weigth of the first  operator (A)
    * weightB: weigth of the second operator (B)
    * @i,j,k:  Index of the cell
-   **/ 
-  void Apply(VariableType * Phi, VariableType * PhiAuxA, VariableType * PhiAuxB,
-      const double &Sign, const double &WeightA, const double &WeightB,
-      const uint &i, const uint &j, const uint &k) {
+   **/
+  void Apply(
+      PrecisionType * Phi,
+      PrecisionType * PhiAuxA,
+      PrecisionType * PhiAuxB,
+      const double &Sign,
+      const double &WeightA,
+      const double &WeightB,
+      const uint &i,
+      const uint &j,
+      const uint &k) {
 
     uint cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
-    
-    VariableType    iPhi;
-    Variable3DType  origin;
-    Variable3DType  displacement;
+
+    PrecisionType iPhi[MAX_DIM];
+    PrecisionType origin[MAX_DIM];
+    PrecisionType displacement[MAX_DIM];
 
     origin[0] = i * rDx;
     origin[1] = j * rDx;
     origin[2] = k * rDx;
 
-    for(int d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * pVelocity[cell][d] * rDt;
+    for(uint d = 0; d < 3; d++) {
+      displacement[d] = origin[d] + Sign * pVelocity[cell*rDim+d] * rDt;
     }
 
-    InterpolateType::Interpolate(pBlock,PhiAuxB,&iPhi,displacement);
+    InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)&iPhi,displacement,rDim);
 
-    Phi[cell] = WeightA * PhiAuxA[cell] + WeightB * iPhi;
+    for(uint d = 0; d < rDim; d++) {
+      Phi[cell*rDim+d] = WeightA * PhiAuxA[cell*rDim+d] + WeightB * iPhi[d];
+    }
   }
 };

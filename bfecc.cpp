@@ -20,10 +20,11 @@ uint N          =  0;
 uint NB         =  0;
 uint NE         =  0;
 uint OutputStep =  0;
+uint Dim        =  0;
 
 double dx       =  0.0;
 double idx      =  0.0;
-double dt       =  0.1; 
+double dt       =  0.1;
 double h        = 16.0;
 double omega    =  1.0;
 double maxv     =  0.0;
@@ -31,19 +32,19 @@ double CFL      =  1.0;
 double cellSize =  1.0;
 double diffTerm =  1e-5;
 
-#define WRITE_INIT_R(_STEP_)                      \
-io.WriteGidMeshBin(N,N,N);                        \
-io.WriteGidResultsBin2D(step0,N,N,N,0,"TMP");     \
-io.WriteGidResultsBin3D(velf0,N,N,N,0,"VEL");     \
-OutputStep = _STEP_;                              \
+#define WRITE_INIT_R(_STEP_)                                          \
+io.WriteGidMeshBin(N,N,N);                                            \
+io.WriteGidResultsBin2D((PrecisionType*)step0,N,N,N,0,"TMP");         \
+io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
+OutputStep = _STEP_;                                                  \
 
-#define WRITE_RESULT(_STEP_)                      \
-if (OutputStep == 0) {                            \
-  io.WriteGidResultsBin2D(step0,N,N,N,i,"TMP");   \
-  io.WriteGidResultsBin3D(velf0,N,N,N,i,"VEL");   \
-  OutputStep = _STEP_;                            \
-}                                                 \
-OutputStep--;                                     \
+#define WRITE_RESULT(_STEP_)                                          \
+if (OutputStep == 0) {                                                \
+  io.WriteGidResultsBin2D((PrecisionType*)step0,N,N,N,i,"TMP");       \
+  io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i,Dim,"VEL");   \
+  OutputStep = _STEP_;                                                \
+}                                                                     \
+OutputStep--;                                                         \
 
 double calculateMaxDt_CFL(double CFL, double h, double maxv) {
   return CFL*h / maxv;
@@ -71,20 +72,21 @@ int main(int argc, char *argv[]) {
 
   dx          = h/N;
   idx         = 1.0/dx;
+  Dim         = 3;
 
   FileIO io("grid",N);
 
-  Block          * block = NULL;
+  Block      * block = NULL;
 
-  VariableType   * step0 = NULL;
-  VariableType   * step1 = NULL;
-  VariableType   * step2 = NULL;
+  Variable3D * step0 = NULL;
+  Variable3D * step1 = NULL;
+  Variable3D * step2 = NULL;
 
-  VariableType   * pres0 = NULL;
-  VariableType   * pres1 = NULL;
-  VariableType   * pres2 = NULL;
+  Variable1D * pres0 = NULL;
+  Variable1D * pres1 = NULL;
+  Variable1D * pres2 = NULL;
 
-  Variable3DType * velf0 = NULL;
+  Variable3D * velf0 = NULL;
 
   MemManager memmrg(false);
 
@@ -104,9 +106,23 @@ int main(int argc, char *argv[]) {
   printf("Allocation correct\n");
   printf("Initialize\n");
 
-  block = new Block(step0,step1,step2,velf0,dx,omega,BW,N,N,N,NB,NE);
+  block = new Block(
+    (PrecisionType*) step0,
+    (PrecisionType*) step1,
+    (PrecisionType*) step2,
+    (PrecisionType*) velf0,
+    dx,
+    omega,
+    BW,
+    N,
+    N,
+    N,
+    NB,
+    NE,
+    Dim
+  );
 
-  block->InitializeVariable();
+  block->Zero();
   block->InitializeVelocity(maxv);
   block->WriteHeatFocus();
 
@@ -119,7 +135,7 @@ int main(int argc, char *argv[]) {
   DiffusionSolver.SetDiffTerm(diffTerm);
 
   WRITE_INIT_R(steeps/10)
-  
+
   #pragma omp parallel
   #pragma omp single
   {
@@ -144,7 +160,7 @@ int main(int argc, char *argv[]) {
 
 #ifndef _WIN32
   gettimeofday(&end, NULL);
-  duration = FETCHTIME
+  duration = FETCHTIME(start,end)
 #else
   end = GetTickCount();
   duration = (end - start) / 1000.0f;

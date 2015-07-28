@@ -80,7 +80,7 @@ private:
 // Index calculation
 class Indexer {
 public:
-  /** 
+  /**
    * Calculates the standard index
    * @BW: BorderWidth
    **/
@@ -102,7 +102,7 @@ public:
 
   static uint * pIndexTable;
 
-  /** 
+  /**
    * Calculates the morton index
    * @BW: BorderWidth
    **/
@@ -134,7 +134,7 @@ uint * MortonIndexer::pIndexTable;
 
 class PeanoIndexer : Indexer {
 public:
-  /** 
+  /**
    * Calculates the Peano index
    * @BW: BorderWidth
    **/
@@ -151,13 +151,13 @@ private:
 
 public:
 
-  static void GlobalToLocal(Variable3DType coord, double f) { 
-    for(int d = 0; d < 3; d++)
-      coord[d] *= f; 
+  static void GlobalToLocal(PrecisionType * coord, double f, const uint &dim) {
+    for(uint d = 0; d < dim; d++)
+      coord[d] *= f;
   }
 
-  static void LocalToGlobal(Variable3DType coord, double f) { 
-    for(int d = 0; d < 3; d++)
+  static void LocalToGlobal(PrecisionType * coord, double f, const uint &dim) { 
+    for(uint d = 0; d < dim; d++)
       coord[d] /= f;
   }
 };
