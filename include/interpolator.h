@@ -48,16 +48,16 @@ public:
     Ny = 1-(Coords[1] - pj);
     Nz = 1-(Coords[2] - pk);
 
-    for(int d = 0; d < 3; d++) {
+    for(uint d = 0; d < Dim; d++) {
       *(NewPhi+d) = (
-        OldPhi[IndexType::GetIndex(pi,pj,pk,block->mPaddY,block->mPaddZ)+d] * (    Nx) * (    Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(ni,pj,pk,block->mPaddY,block->mPaddZ)+d] * (1 - Nx) * (    Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(pi,nj,pk,block->mPaddY,block->mPaddZ)+d] * (    Nx) * (1 - Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(ni,nj,pk,block->mPaddY,block->mPaddZ)+d] * (1 - Nx) * (1 - Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(pi,pj,nk,block->mPaddY,block->mPaddZ)+d] * (    Nx) * (    Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(ni,pj,nk,block->mPaddY,block->mPaddZ)+d] * (1 - Nx) * (    Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(pi,nj,nk,block->mPaddY,block->mPaddZ)+d] * (    Nx) * (1 - Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(ni,nj,nk,block->mPaddY,block->mPaddZ)+d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
+        OldPhi[IndexType::GetIndex(pi,pj,pk,block->mPaddY,block->mPaddZ)*Dim+d] * (    Nx) * (    Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(ni,pj,pk,block->mPaddY,block->mPaddZ)*Dim+d] * (1 - Nx) * (    Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(pi,nj,pk,block->mPaddY,block->mPaddZ)*Dim+d] * (    Nx) * (1 - Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(ni,nj,pk,block->mPaddY,block->mPaddZ)*Dim+d] * (1 - Nx) * (1 - Ny) * (    Nz) +
+        OldPhi[IndexType::GetIndex(pi,pj,nk,block->mPaddY,block->mPaddZ)*Dim+d] * (    Nx) * (    Ny) * (1 - Nz) +
+        OldPhi[IndexType::GetIndex(ni,pj,nk,block->mPaddY,block->mPaddZ)*Dim+d] * (1 - Nx) * (    Ny) * (1 - Nz) +
+        OldPhi[IndexType::GetIndex(pi,nj,nk,block->mPaddY,block->mPaddZ)*Dim+d] * (    Nx) * (1 - Ny) * (1 - Nz) +
+        OldPhi[IndexType::GetIndex(ni,nj,nk,block->mPaddY,block->mPaddZ)*Dim+d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
       );
     }
   }
