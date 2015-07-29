@@ -62,9 +62,9 @@ public:
       for(uint j = rBWP; j < rY - rBWP; j++) {
         for(uint i = rBWP; i < rX - rBWP; i++ ) {
           for(uint d = 0; d < rDim; d++) {
-            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
-            pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
-            pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
+            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0;
+            pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0;
+            pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0;
           }
         }
       }
@@ -73,27 +73,31 @@ public:
 
   double InitializeVelocity(double &maxv) {
 
-    maxv = -1;
+    maxv = -1.0f;
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
           for(uint d = 0; d < rDim; d++) {
-            pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0;
+            pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
           }
         }
       }
     }
 
-    for(uint k = rBWP; k < rZ + rBWP; k++) {
-      for(uint j = rBWP; j < rY + rBWP; j++) {
-        for(uint i = rBWP; i < rX + rBWP; i++ ) {
+    for(uint k = 0; k < rZ + rBW; k++) {
+      for(uint j = 0; j < rY + rBW; j++) {
+        for(uint i = 0; i < rX + rBW; i++ ) {
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = -rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] =  rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] =  0.0;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
-          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
-          maxv = std::max((double)abs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = -rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] =  rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+
+          maxv = std::max((double)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((double)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
         }
       }
     }

@@ -240,10 +240,10 @@ public:
     GiD_EndCoordinates();
 
     GiD_BeginElements();
-    for(uint k = BWP; k < Z + BWP - 1; k++) {
-      for(uint j = BWP; j < Y + BWP - 1; j++) {
-        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
-        for(uint i = BWP; i < X + BWP - 1; i++) {
+    for(uint k = 0; k < Z + BW - 1; k++) {
+      for(uint j = 0; j < Y + BW - 1; j++) {
+        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+1;
+        for(uint i = 0; i < X + BW - 1; i++) {
           elemi[0] = cell;                        elemi[1] = cell+1;
           elemi[2] = cell+1+(Y+BW);               elemi[3] = cell+(Y+BW);
           elemi[4] = cell+(Z+BW)*(Y+BW);          elemi[5] = cell+1+(Z+BW)*(Y+BW);
@@ -275,12 +275,12 @@ public:
       const char * name) {
 
     GiD_BeginResult(name, "Static", step, GiD_Scalar, GiD_OnNodes, NULL, NULL, 0, NULL);
-    for(uint k = 0; k < Z + BW - 1; k++) {
-      for(uint j = 0; j < Y + BW - 1; j++) {
-        for(uint i = 0; i < X + BW - 1; i++) {
-          uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+i;
+    for(uint k = 0; k < Z + BW; k++) {
+      for(uint j = 0; j < Y + BW; j++) {
+        for(uint i = 0; i < X + BW; i++) {
+          uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
           uint cell = celln; //interleave64(i,j,k);
-          GiD_WriteScalar(celln, grid[cell]);
+          GiD_WriteScalar(celln+1, grid[cell]);
         }
       }
     }
@@ -315,18 +315,20 @@ public:
       0,
       NULL);
 
-    for(uint k = 0; k < Z + BW - 1; k++) {
-      for(uint j = 0; j < Y + BW - 1; j++) {
-        for(uint i = 0; i < X + BW - 1; i++) {
-          uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+i;
+    for(uint k = 0; k < Z + BW; k++) {
+      for(uint j = 0; j < Y + BW; j++) {
+        for(uint i = 0; i < X + BW; i++) {
+          uint celln = k*(Z+BW)*(Y+BW)+j*(Y+BW)+i;
           uint cell = celln; //interleave64(i,j,k);
 
           GiD_WriteVector(
-            celln,
+            celln+1,
             grid[cell*dim+0],
             grid[cell*dim+1],
             grid[cell*dim+2]);
         }
+
+
       }
     }
     GiD_EndResult();

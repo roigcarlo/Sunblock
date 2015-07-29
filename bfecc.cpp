@@ -28,19 +28,19 @@ double dt       =  0.1;
 double h        = 16.0;
 double omega    =  1.0;
 double maxv     =  0.0;
-double CFL      =  1.0;
+double CFL      =  0.5;
 double cellSize =  1.0;
 double diffTerm =  1e-5;
 
 #define WRITE_INIT_R(_STEP_)                                          \
 io.WriteGidMeshBin(N,N,N);                                            \
-io.WriteGidResultsBin2D((PrecisionType*)step0,N,N,N,0,"TMP");         \
+io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");         \
 io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
 OutputStep = _STEP_;                                                  \
 
 #define WRITE_RESULT(_STEP_)                                          \
 if (OutputStep == 0) {                                                \
-  io.WriteGidResultsBin2D((PrecisionType*)step0,N,N,N,i,"TMP");       \
+  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i,Dim,"TMP");       \
   io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i,Dim,"VEL");   \
   OutputStep = _STEP_;                                                \
 }                                                                     \
@@ -124,10 +124,11 @@ int main(int argc, char *argv[]) {
 
   block->Zero();
   block->InitializeVelocity(maxv);
-  block->WriteHeatFocus();
+  // block->WriteHeatFocus();
 
-  dt = 0.0018;// calculateMaxDt_CFL(CFL,h,maxv);
-  printf("CFL: %f \t Dt: %f\n", CFL, dt);
+  dt = calculateMaxDt_CFL(CFL,dx,maxv);
+
+  printf("Calculated dt: %f -- %f, %f, %f \n",calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv);
 
   BfeccSolver   AdvectionSolver(block,dt);
   StencilSolver DiffusionSolver(block,dt);

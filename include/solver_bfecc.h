@@ -49,6 +49,8 @@ public:
         }
       }
     }
+
+    std::swap(pPhiA,pVelocity);
   }
 
   /**
@@ -141,7 +143,7 @@ public:
       displacement[d] = origin[d] + Sign * pVelocity[cell*rDim+d] * rDt;
     }
 
-    InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)&iPhi,displacement,rDim);
+    InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);
 
     for(uint d = 0; d < rDim; d++) {
       Phi[cell*rDim+d] = WeightA * PhiAuxA[cell*rDim+d] + WeightB * iPhi[d];
