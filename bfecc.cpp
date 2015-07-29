@@ -33,7 +33,7 @@ double cellSize =  1.0;
 double diffTerm =  1e-5;
 
 #define WRITE_INIT_R(_STEP_)                                          \
-io.WriteGidMeshBin(N,N,N);                                            \
+io.WriteGidMeshWithSkinBin(N,N,N);                                            \
 io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");         \
 io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
 OutputStep = _STEP_;                                                  \
@@ -135,7 +135,7 @@ int main(int argc, char *argv[]) {
 
   DiffusionSolver.SetDiffTerm(diffTerm);
 
-  WRITE_INIT_R(steeps/10)
+  WRITE_INIT_R(steeps/20)
 
   #pragma omp parallel
   #pragma omp single
@@ -154,8 +154,8 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
-    DiffusionSolver.Execute();
-    WRITE_RESULT(steeps/10)
+    // DiffusionSolver.Execute();
+    WRITE_RESULT(steeps/20)
   }
   AdvectionSolver.Finish();
 

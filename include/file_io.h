@@ -219,7 +219,7 @@ public:
    * @Y:        Y-Size of the grid
    * @Z:        Z-Size of the grid
    **/
-  void WriteGidMeshBin(
+  void WriteGidMeshWithSkinBin(
       const uint &X,
       const uint &Y,
       const uint &Z) {
@@ -244,6 +244,52 @@ public:
       for(uint j = 0; j < Y + BW - 1; j++) {
         uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+1;
         for(uint i = 0; i < X + BW - 1; i++) {
+          elemi[0] = cell;                        elemi[1] = cell+1;
+          elemi[2] = cell+1+(Y+BW);               elemi[3] = cell+(Y+BW);
+          elemi[4] = cell+(Z+BW)*(Y+BW);          elemi[5] = cell+1+(Z+BW)*(Y+BW);
+          elemi[6] = cell+1+(Z+BW)*(Y+BW)+(Y+BW); elemi[7] = cell+(Z+BW)*(Y+BW)+(Y+BW);
+
+          GiD_WriteElementMat(cell++, elemi);
+        }
+      }
+    }
+
+    GiD_EndElements();
+    GiD_EndMesh();
+  }
+
+
+  /**
+   * Writes the mesh in GiD format.
+   * @X:        X-Size of the grid
+   * @Y:        Y-Size of the grid
+   * @Z:        Z-Size of the grid
+   **/
+  void WriteGidMeshBin(
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
+
+    int elemi[8];
+
+    GiD_BeginMesh(name_raw.str().c_str(), GiD_3D, GiD_Hexahedra, 8);
+
+    GiD_BeginCoordinates();
+    for(uint k = 0; k < Z + BW; k++) {
+      for(uint j = 0; j < Y + BW; j++) {
+        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
+        for(uint i = 0; i < X + BW; i++) {
+          GiD_WriteCoordinates(cell++, i, j, k);
+        }
+      }
+    }
+    GiD_EndCoordinates();
+
+    GiD_BeginElements();
+    for(uint k = BWP; k < Z + BWP - 1; k++) {
+      for(uint j = BWP; j < Y + BWP - 1; j++) {
+        uint cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP+1;
+        for(uint i = BWP; i < X + BWP - 1; i++) {
           elemi[0] = cell;                        elemi[1] = cell+1;
           elemi[2] = cell+1+(Y+BW);               elemi[3] = cell+(Y+BW);
           elemi[4] = cell+(Z+BW)*(Y+BW);          elemi[5] = cell+1+(Z+BW)*(Y+BW);
