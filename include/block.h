@@ -73,7 +73,7 @@ public:
 
   double InitializeVelocity(double &maxv) {
 
-    maxv = -1.0f;
+    maxv = 1.0f;
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
@@ -88,13 +88,21 @@ public:
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++ ) {
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f;//-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f;// rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 1.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f;//-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f;// rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 1.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
           pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+
+          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 1.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+
+          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
+          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 1.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
           maxv = std::max((double)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
           maxv = std::max((double)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);

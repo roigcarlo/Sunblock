@@ -28,7 +28,7 @@ double dt       =  0.1;
 double h        = 16.0;
 double omega    =  1.0;
 double maxv     =  0.0;
-double CFL      =  0.5;
+double CFL      =  0.25;
 double cellSize =  1.0;
 double diffTerm =  1e-5;
 
@@ -154,7 +154,7 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
-    // DiffusionSolver.Execute();
+    //DiffusionSolver.Execute();
     WRITE_RESULT(steeps/20)
   }
   AdvectionSolver.Finish();
