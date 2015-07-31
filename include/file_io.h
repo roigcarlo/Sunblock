@@ -312,7 +312,7 @@ public:
    * @Z:        Z-Size of the grid
    * @step:     Step of the result
    **/
-  void WriteGidResultsBin2D(
+  void WriteGidResultsBin1D(
       PrecisionType * grid,
       const uint &X,
       const uint &Y,

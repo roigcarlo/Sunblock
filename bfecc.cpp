@@ -28,20 +28,22 @@ double dt       =  0.1;
 double h        = 16.0;
 double omega    =  1.0;
 double maxv     =  0.0;
-double CFL      =  0.25;
+double CFL      =  0.09;
 double cellSize =  1.0;
 double diffTerm =  1e-5;
 
 #define WRITE_INIT_R(_STEP_)                                          \
-io.WriteGidMeshWithSkinBin(N,N,N);                                            \
-io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");         \
+io.WriteGidMeshWithSkinBin(N,N,N);                                    \
+io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");     \
 io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
+io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,0    ,"PRES");    \
 OutputStep = _STEP_;                                                  \
 
 #define WRITE_RESULT(_STEP_)                                          \
 if (OutputStep == 0) {                                                \
-  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i,Dim,"TMP");       \
+  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i,Dim,"TMP");   \
   io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i,Dim,"VEL");   \
+  io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,i    ,"PRES");  \
   OutputStep = _STEP_;                                                \
 }                                                                     \
 OutputStep--;                                                         \
@@ -84,7 +86,6 @@ int main(int argc, char *argv[]) {
 
   Variable1D * pres0 = NULL;
   Variable1D * pres1 = NULL;
-  Variable1D * pres2 = NULL;
 
   Variable3D * velf0 = NULL;
 
@@ -98,7 +99,6 @@ int main(int argc, char *argv[]) {
   // Pressure
   memmrg.AllocateGrid(&pres0, N, N, N, 1);
   memmrg.AllocateGrid(&pres1, N, N, N, 1);
-  memmrg.AllocateGrid(&pres2, N, N, N, 1);
 
   // Velocity
   memmrg.AllocateGrid(&velf0, N, N, N, 1);
@@ -110,6 +110,8 @@ int main(int argc, char *argv[]) {
     (PrecisionType*) step0,
     (PrecisionType*) step1,
     (PrecisionType*) step2,
+    (PrecisionType*) pres0,
+    (PrecisionType*) pres1,
     (PrecisionType*) velf0,
     dx,
     omega,
@@ -124,6 +126,7 @@ int main(int argc, char *argv[]) {
 
   block->Zero();
   block->InitializeVelocity(maxv);
+  block->InitializePressure();
   // block->WriteHeatFocus();
 
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
@@ -178,7 +181,6 @@ int main(int argc, char *argv[]) {
 
   memmrg.ReleaseGrid(&pres0, 1);
   memmrg.ReleaseGrid(&pres1, 1);
-  memmrg.ReleaseGrid(&pres2, 1);
 
   memmrg.ReleaseGrid(&velf0, 1);
 
