@@ -25,6 +25,34 @@ private:
     }
   }
 
+  // This does not belong here! put it in a class
+  inline void gradient(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const uint &cell,
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
+
+    double pressGrad[3];
+
+    pressGrad[0] = (
+      0.5 * pPressure[(cell + 1)] -
+      0.5 * pPressure[(cell - 1)]);
+
+    pressGrad[1] = (
+      0.5 * pPressure[(cell - (X+BW))] -
+      0.5 * pPressure[(cell + (X+BW))]);
+
+    pressGrad[2] = (
+      0.5 * pPressure[(cell - (Y+BW)*(X+BW))] -
+      0.5 * pPressure[(cell + (Y+BW)*(X+BW))]);
+
+    for (uint d = 0; d < rDim; d++) {
+      gridA[cell*rDim+d] = gridA[cell*rDim+d] + pressGrad[d];
+    }
+  }
+
 
 public:
 
@@ -53,11 +81,12 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          stencilCross(pPhiA,pPhiB,cell++,rX,rY,rZ);
+          gradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
         }
       }
     }
 
+/*
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
@@ -70,13 +99,14 @@ public:
         }
       }
     }
+*/
 
   }
 
   void ExecuteVector() {
 
     // TODO: Implement this with the new arrays
-    
+
     // uint cell, pcellb, pcelle;
     //
     // PrecisionType __attribute__((aligned(ALIGN))) tmpa[VP];

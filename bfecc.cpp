@@ -33,7 +33,7 @@ double cellSize =  1.0;
 double diffTerm =  1e-5;
 
 #define WRITE_INIT_R(_STEP_)                                          \
-io.WriteGidMeshWithSkinBin(N,N,N);                                    \
+io.WriteGidMeshBin(N,N,N);                                    \
 io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");     \
 io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
 io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,0    ,"PRES");    \
@@ -107,7 +107,7 @@ int main(int argc, char *argv[]) {
   printf("Initialize\n");
 
   block = new Block(
-    (PrecisionType*) step0,
+    (PrecisionType*) velf0,
     (PrecisionType*) step1,
     (PrecisionType*) step2,
     (PrecisionType*) pres0,
@@ -125,10 +125,11 @@ int main(int argc, char *argv[]) {
   );
 
   block->Zero();
-  block->InitializeVelocity(maxv);
+  block->InitializeVelocity();
   block->InitializePressure();
   // block->WriteHeatFocus();
 
+  block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
 
   printf("Calculated dt: %f -- %f, %f, %f \n",calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv);
@@ -157,7 +158,10 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
-    //DiffusionSolver.Execute();
+    DiffusionSolver.Execute();
+    block->calculateMaxVelocity(maxv);
+    dt = calculateMaxDt_CFL(CFL,dx,maxv);
+    printf("Recalculated dt for step %d: %f -- %f, %f, %f \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv);
     WRITE_RESULT(steeps/20)
   }
   AdvectionSolver.Finish();

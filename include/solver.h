@@ -20,6 +20,7 @@ public:
       pPhiA(block->pPhiA),
       pPhiB(block->pPhiB),
       pPhiC(block->pPhiC),
+      pPressure(block->pPressA),
       pVelocity(block->pVelocity),
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
@@ -54,6 +55,7 @@ protected:
   PrecisionType * pPhiB;
   PrecisionType * pPhiC;
 
+  PrecisionType * pPressure;
   PrecisionType * pVelocity;
 
   const double & rDx;
@@ -69,7 +71,7 @@ protected:
 
   const uint & rNB;
   const uint & rNE;
-  
+
   const uint & rDim;
 
 };
