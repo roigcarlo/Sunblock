@@ -22,15 +22,20 @@ uint NE         =  0;
 uint OutputStep =  0;
 uint Dim        =  0;
 
-double dx       =  0.0;
-double idx      =  0.0;
-double dt       =  0.1;
-double h        = 16.0;
-double omega    =  1.0;
-double maxv     =  0.0;
-double CFL      =  0.09;
-double cellSize =  1.0;
-double diffTerm =  1e-5;
+double dx       =  0.0f;
+double idx      =  0.0f;
+double dt       =  0.1f;
+double h        = 16.0f;
+double omega    =  1.0f;
+double maxv     =  0.0f;
+double oldmaxv  =  0.0f;
+double CFL      =  0.09f;
+double cellSize =  1.0f;
+double diffTerm =  1.0e-5f;
+
+double ro       =  1.0f;
+double mu       =  1.0e-6;
+double ka       =  1.0e-5;
 
 #define WRITE_INIT_R(_STEP_)                                          \
 io.WriteGidMeshBin(N,N,N);                                    \
@@ -83,6 +88,7 @@ int main(int argc, char *argv[]) {
   Variable3D * step0 = NULL;
   Variable3D * step1 = NULL;
   Variable3D * step2 = NULL;
+  Variable3D * step3 = NULL;
 
   Variable1D * pres0 = NULL;
   Variable1D * pres1 = NULL;
@@ -95,6 +101,7 @@ int main(int argc, char *argv[]) {
   memmrg.AllocateGrid(&step0, N, N, N, 1);
   memmrg.AllocateGrid(&step1, N, N, N, 1);
   memmrg.AllocateGrid(&step2, N, N, N, 1);
+  memmrg.AllocateGrid(&step3, N, N, N, 1);
 
   // Pressure
   memmrg.AllocateGrid(&pres0, N, N, N, 1);
@@ -110,11 +117,15 @@ int main(int argc, char *argv[]) {
     (PrecisionType*) velf0,
     (PrecisionType*) step1,
     (PrecisionType*) step2,
+    (PrecisionType*) step3,
     (PrecisionType*) pres0,
     (PrecisionType*) pres1,
     (PrecisionType*) velf0,
     dx,
     omega,
+    ro,
+    mu,
+    ka,
     BW,
     N,
     N,
@@ -156,14 +167,17 @@ int main(int argc, char *argv[]) {
 #endif
 
   AdvectionSolver.Prepare();
+
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
     DiffusionSolver.Execute();
+    oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    printf("Recalculated dt for step %d: %f -- %f, %f, %f \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv);
+    printf("Step %d: %f -- %f, %f, %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
     WRITE_RESULT(steeps/20)
   }
+
   AdvectionSolver.Finish();
 
 #ifndef _WIN32
@@ -182,6 +196,7 @@ int main(int argc, char *argv[]) {
   memmrg.ReleaseGrid(&step0, 1);
   memmrg.ReleaseGrid(&step1, 1);
   memmrg.ReleaseGrid(&step2, 1);
+  memmrg.ReleaseGrid(&step3, 1);
 
   memmrg.ReleaseGrid(&pres0, 1);
   memmrg.ReleaseGrid(&pres1, 1);

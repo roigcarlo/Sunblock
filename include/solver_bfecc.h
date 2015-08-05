@@ -45,12 +45,11 @@ public:
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
+          Apply(pPhiD,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
 
-    std::swap(pPhiA,pVelocity);
   }
 
   /**
@@ -98,7 +97,7 @@ public:
           for(uint k = BOT(kk); k < TOP(kk); k++) {
             for(uint j = BOT(jj); j < TOP(jj); j++) {
               for(uint i = BOT(ii); i < TOP(ii); i++) {
-                Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
+                Apply(pPhiD,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
               }
             }
           }

@@ -13,22 +13,31 @@ public:
       PrecisionType * PhiA,
       PrecisionType * PhiB,
       PrecisionType * PhiC,
+      PrecisionType * PhiD,
       PrecisionType * PressA,
       PrecisionType * PressB,
       PrecisionType * Field,
-      const double &Dx, const double &Omega,
+      const double &Dx,
+      const double &Omega,
+      const double &Ro,
+      const double &Mu,
+      const double &Ka,
       const uint &BW,
       const uint &X, const uint &Y, const uint &Z,
       const uint &NB, const uint &NE, const uint &DIM) :
     pPhiA(PhiA),
     pPhiB(PhiB),
     pPhiC(PhiC),
+    pPhiD(PhiD),
     pPressA(PressA),
     pPressB(PressB),
     pVelocity(Field),
     rDx(Dx),
     rIdx(1.0/Dx),
     rOmega(Omega),
+    rRo(Ro),
+    rMu(Mu),
+    rKa(Ka),
     rBW(BW),
     rBWP(BW/2),
     rX(X),
@@ -176,6 +185,7 @@ public:
   PrecisionType * pPhiA;
   PrecisionType * pPhiB;
   PrecisionType * pPhiC;
+  PrecisionType * pPhiD;
 
   PrecisionType * pPressA;
   PrecisionType * pPressB;
@@ -185,6 +195,9 @@ public:
   const double & rDx;
   const double rIdx;
   const double & rOmega;
+  const double & rRo;
+  const double & rMu;
+  const double & rKa;
 
   const uint & rBW;
   const uint rBWP;

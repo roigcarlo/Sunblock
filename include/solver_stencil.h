@@ -14,18 +14,17 @@ private:
       const uint &Z) {
 
     for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = mDiffTerm * (
-        gridA[(cell - 1)*rDim+d]   +                       // Left
-        gridA[(cell + 1)*rDim+d]   +                       // Right
-        gridA[(cell - (X+BW))*rDim+d]   +                  // Up
-        gridA[(cell + (X+BW))*rDim+d]   +                  // Down
-        gridA[(cell - (Y+BW)*(X+BW))*rDim+d] +             // Front
-        gridA[(cell + (Y+BW)*(X+BW))*rDim+d] -             // Back
-        6 * gridA[cell*rDim+d]);                           // Self
+      gridB[cell*rDim+d] = (
+        gridA[(cell - 1)*rDim+d]   +                  // Left
+        gridA[(cell + 1)*rDim+d]   +                  // Right
+        gridA[(cell - (X+BW))*rDim+d]   +             // Up
+        gridA[(cell + (X+BW))*rDim+d]   +             // Down
+        gridA[(cell - (Y+BW)*(X+BW))*rDim+d] +        // Front
+        gridA[(cell + (Y+BW)*(X+BW))*rDim+d]) *
+        1.0f/6.0f;
     }
   }
 
-  // This does not belong here! put it in a class
   inline void gradient(
       PrecisionType * gridA,
       PrecisionType * gridB,
@@ -37,22 +36,41 @@ private:
     double pressGrad[3];
 
     pressGrad[0] = (
-      0.5 * pPressure[(cell + 1)] -
-      0.5 * pPressure[(cell - 1)]);
+      pPressA[(cell + 1)] -
+      pPressA[(cell - 1)]);
 
     pressGrad[1] = (
-      0.5 * pPressure[(cell - (X+BW))] -
-      0.5 * pPressure[(cell + (X+BW))]);
+      pPressA[(cell - (X+BW))] -
+      pPressA[(cell + (X+BW))]);
 
     pressGrad[2] = (
-      0.5 * pPressure[(cell - (Y+BW)*(X+BW))] -
-      0.5 * pPressure[(cell + (Y+BW)*(X+BW))]);
+      pPressA[(cell - (Y+BW)*(X+BW))] -
+      pPressA[(cell + (Y+BW)*(X+BW))]);
 
     for (uint d = 0; d < rDim; d++) {
-      gridA[cell*rDim+d] = gridA[cell*rDim+d] + pressGrad[d];
+      gridB[cell*rDim+d] = gridA[cell*rDim+d] + pressGrad[d];
     }
   }
 
+  inline void fixedGradient(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const uint &cell,
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
+
+    double pressGrad[3];
+
+    pressGrad[0] = 1.0f/64.0f;
+    pressGrad[1] = 0.0f;
+    pressGrad[2] = 0.0f;
+
+    for (uint d = 0; d < rDim; d++) {
+      gridB[cell*rDim+d] = pressGrad[d];
+    }
+
+  }
 
 public:
 
@@ -76,30 +94,42 @@ public:
    **/
   void Execute() {
 
+    // Apply the pressure gradient
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          gradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
+          // gradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
+          fixedGradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
         }
       }
     }
 
-/*
+    // Lapplacian of the variable
     #pragma omp parallel for
+    for(uint k = rBWP; k < rZ + rBWP; k++) {
+      for(uint j = rBWP; j < rY + rBWP; j++) {
+        uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(uint i = rBWP; i < rX + rBWP; i++) {
+          stencilCross(pPhiA,pPhiC,cell++,rX,rY,rZ);
+        }
+      }
+    }
+
+    // Combine it all together and store it back in A
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
           for (uint d = 0; d < rDim; d++) {
-            pPhiA[cell*rDim+d] += pPhiB[cell*rDim+d];
+            pPhiA[cell*rDim+d] = rRo * 1.0f/rDt * pPhiA[cell*rDim+d] -rMu * pPhiC[cell*rDim+d] + pPhiB[cell*rDim+d] + pPhiD[cell*rDim+d];
+            pPhiA[cell*rDim+d] *= rDt;
           }
           cell++;
         }
       }
     }
-*/
 
   }
 
