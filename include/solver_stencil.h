@@ -52,6 +52,22 @@ private:
     }
   }
 
+  inline void undefopp(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const uint &cell,
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
+
+    gridB[cell] = 0;
+    
+    gridB[cell] += fabs(gridA[(cell+1)*rDim+0] + gridA[(cell-1)*rDim+0]);
+    gridB[cell] += fabs(gridA[(cell + (X+BW))*rDim+1] + gridA[(cell - (X+BW))*rDim+1]);
+    gridB[cell] += fabs(gridA[(cell + (Y+BW)*(X+BW))*rDim+2] + gridA[(cell - (Y+BW)*(X+BW))*rDim+2]);
+
+  }
+
   inline void fixedGradient(
       PrecisionType * gridA,
       PrecisionType * gridB,
@@ -100,8 +116,8 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          // gradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
-          fixedGradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
+          gradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
+          // fixedGradient(pPhiA,pPhiB,cell++,rX,rY,rZ);
         }
       }
     }
@@ -123,17 +139,42 @@ public:
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
           for (uint d = 0; d < rDim; d++) {
-            pPhiA[cell*rDim+d] = rRo * 1.0f/rDt * pPhiA[cell*rDim+d] -rMu * pPhiC[cell*rDim+d] + pPhiB[cell*rDim+d] + pPhiD[cell*rDim+d];
-            // pPhiA[cell*rDim+d] = pPhiA[cell*rDim+d] - rMu * pPhiC[cell*rDim+d];// + pPhiB[cell*rDim+d] + pPhiD[cell*rDim+d];
-            pPhiA[cell*rDim+d] *= rDt;
+            pPhiC[cell*rDim+d] = -rMu * pPhiC[cell*rDim+d] + pPhiB[cell*rDim+d];
+            pPhiB[cell*rDim+d] = pPhiA[cell*rDim+d] + pPhiC[cell*rDim+d] * rDt;
           }
           cell++;
         }
       }
     }
 
+    for(uint ss = 0 ; ss < rPdt; ss++) {
+
+      for(uint k = rBWP; k < rZ + rBWP; k++) {
+        for(uint j = rBWP; j < rY + rBWP; j++) {
+          uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+          for(uint i = rBWP; i < rX + rBWP; i++) {
+            undefopp(pPhiB,pPressA,cell,rX,rY,rZ);
+            pPressA[cell++] *= rRo * 343.2f*343.2f * rPdt * 0.001;
+          }
+        }
+      }
+
+      for(uint k = rBWP; k < rZ + rBWP; k++) {
+        for(uint j = rBWP; j < rY + rBWP; j++) {
+          uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+          for(uint i = rBWP; i < rX + rBWP; i++) {
+            gradient(pPhiB,pPhiA,cell++,rX,rY,rZ);
+          }
+        }
+      }
+
+      std::swap(pPhiB,pPhiA);
+
+    }
+
     copyLeft(pPhiA);
     copyRight(pPhiA);
+    // copyLeftToRight(pPhiA);
 
   }
 

@@ -51,13 +51,13 @@ public:
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiD,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
+          Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
 
-    copyLeft(pPhiD);
-    copyRight(pPhiD);
+    copyLeft(pPhiA);
+    copyRight(pPhiA);
 
   }
 
