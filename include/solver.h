@@ -15,7 +15,7 @@ public:
   typedef Block::IndexType        IndexType;
   typedef TrilinealInterpolator   InterpolateType;
 
-  Solver(Block * block, const double& Dt) :
+  Solver(Block * block, const double& Dt, const double& Pdt) :
       pBlock(block),
       pPhiA(block->pPhiA),
       pPhiB(block->pPhiB),
@@ -27,6 +27,7 @@ public:
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
       rDt(Dt),
+      rPdt(Pdt),
       rRo(block->rRo),
       rMu(block->rMu),
       rKa(block->rKa),
@@ -41,6 +42,48 @@ public:
   }
 
   ~Solver() {
+  }
+
+  void copyLeft(
+      PrecisionType * Phi
+    ) {
+
+    for(uint k = 0; k < rZ + rBW; k++) {
+      for(uint j = 0; j < rY + rBW; j++) {
+        for(uint d = 0; d < rDim; d++) {
+          Phi[IndexType::GetIndex(0,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d] = Phi[IndexType::GetIndex(1,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d];
+        }
+      }
+    }
+  
+  }
+
+  void copyRight(
+      PrecisionType * Phi
+    ) {
+
+    for(uint k = 0; k < rZ + rBW; k++) {
+      for(uint j = 0; j < rY + rBW; j++) {
+        for(uint d = 0; d < rDim; d++) {
+          Phi[IndexType::GetIndex(rX + rBW - 1,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d];
+        }
+      }
+    }
+
+  }
+
+  void copyLeftToRight(
+      PrecisionType * Phi
+    ) {
+
+    for(uint k = 0; k < rZ + rBW; k++) {
+      for(uint j = 0; j < rY + rBW; j++) {
+        for(uint d = 0; d < rDim; d++) {
+          Phi[IndexType::GetIndex(0,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d];
+        }
+      }
+    }
+
   }
 
   void Prepare() {
@@ -69,6 +112,7 @@ protected:
   const double & rDx;
   const double rIdx;
   const double & rDt;
+  const double & rPdt;
 
   const double & rRo;
   const double & rMu;

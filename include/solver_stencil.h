@@ -14,7 +14,7 @@ private:
       const uint &Z) {
 
     for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = (
+      gridB[cell*rDim+d] = gridA[cell*rDim+d] - (
         gridA[(cell - 1)*rDim+d]   +                  // Left
         gridA[(cell + 1)*rDim+d]   +                  // Right
         gridA[(cell - (X+BW))*rDim+d]   +             // Up
@@ -62,7 +62,7 @@ private:
 
     double pressGrad[3];
 
-    pressGrad[0] = 1.0f/64.0f;
+    pressGrad[0] = 0.0f;// 1.0f/64.0f;
     pressGrad[1] = 0.0f;
     pressGrad[2] = 0.0f;
 
@@ -74,8 +74,8 @@ private:
 
 public:
 
-  StencilSolver(Block * block, const double& Dt) :
-      Solver(block,Dt) {
+  StencilSolver(Block * block, const double& Dt, const double& Pdt) :
+      Solver(block,Dt,Pdt) {
 
   }
 
@@ -124,12 +124,16 @@ public:
         for(uint i = rBWP; i < rX + rBWP; i++) {
           for (uint d = 0; d < rDim; d++) {
             pPhiA[cell*rDim+d] = rRo * 1.0f/rDt * pPhiA[cell*rDim+d] -rMu * pPhiC[cell*rDim+d] + pPhiB[cell*rDim+d] + pPhiD[cell*rDim+d];
+            // pPhiA[cell*rDim+d] = pPhiA[cell*rDim+d] - rMu * pPhiC[cell*rDim+d];// + pPhiB[cell*rDim+d] + pPhiD[cell*rDim+d];
             pPhiA[cell*rDim+d] *= rDt;
           }
           cell++;
         }
       }
     }
+
+    copyLeft(pPhiA);
+    copyRight(pPhiA);
 
   }
 

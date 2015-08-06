@@ -3,8 +3,8 @@
 class BfeccSolver : public Solver {
 public:
 
-  BfeccSolver(Block * block, const double& Dt) :
-      Solver(block,Dt) {
+  BfeccSolver(Block * block, const double& Dt, const double& Pdt) :
+      Solver(block,Dt,Pdt) {
 
   }
 
@@ -32,6 +32,9 @@ public:
       }
     }
 
+    copyLeft(pPhiB);
+    copyRight(pPhiB);
+
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
@@ -41,6 +44,9 @@ public:
       }
     }
 
+    copyLeft(pPhiC);
+    copyRight(pPhiC);
+
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
@@ -49,6 +55,9 @@ public:
         }
       }
     }
+
+    copyLeft(pPhiD);
+    copyRight(pPhiD);
 
   }
 

@@ -25,16 +25,17 @@ uint Dim        =  0;
 double dx       =  0.0f;
 double idx      =  0.0f;
 double dt       =  0.1f;
+double pdt      =  0.1f;
 double h        = 16.0f;
 double omega    =  1.0f;
 double maxv     =  0.0f;
 double oldmaxv  =  0.0f;
-double CFL      =  0.09f;
+double CFL      =  0.8f;
 double cellSize =  1.0f;
 double diffTerm =  1.0e-5f;
 
 double ro       =  1.0f;
-double mu       =  1.0e-6;
+double mu       =  1.93e-5;
 double ka       =  1.0e-5;
 
 #define WRITE_INIT_R(_STEP_)                                          \
@@ -59,6 +60,11 @@ double calculateMaxDt_CFL(double CFL, double h, double maxv) {
 
 double calculateMaxDt_Fourier() {
   return 0.0;
+}
+
+double calculatePressDt(double dt, double limit) {
+  int base = ceil(dt/limit);
+  return dt/base;
 }
 
 int main(int argc, char *argv[]) {
@@ -142,11 +148,12 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
+  pdt = calculatePressDt(dt,1.0f/(343.2f*343.2f));
 
-  printf("Calculated dt: %f -- %f, %f, %f \n",calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv);
+  printf("Calculated dt: %f -- %f, %f, %f \n",dt,CFL,h/N,maxv);
 
-  BfeccSolver   AdvectionSolver(block,dt);
-  StencilSolver DiffusionSolver(block,dt);
+  BfeccSolver   AdvectionSolver(block,dt,pdt);
+  StencilSolver DiffusionSolver(block,dt,pdt);
 
   DiffusionSolver.SetDiffTerm(diffTerm);
 
@@ -174,7 +181,8 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    printf("Step %d: %f -- %f, %f, %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
+    pdt = calculatePressDt(dt,1.0f/(343.2f*343.2f));
+    // printf("Step %d: %f -- %f, %f, %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
     WRITE_RESULT(steeps/20)
   }
 
