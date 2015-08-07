@@ -17,11 +17,11 @@ public:
       PrecisionType * PressA,
       PrecisionType * PressB,
       PrecisionType * Field,
-      const double &Dx,
-      const double &Omega,
-      const double &Ro,
-      const double &Mu,
-      const double &Ka,
+      const PrecisionType &Dx,
+      const PrecisionType &Omega,
+      const PrecisionType &Ro,
+      const PrecisionType &Mu,
+      const PrecisionType &Ka,
       const uint &BW,
       const uint &X, const uint &Y, const uint &Z,
       const uint &NB, const uint &NE, const uint &DIM) :
@@ -114,20 +114,20 @@ public:
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++ ) {
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
           pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
-          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
           pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
-          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (double)(j-(rY+1.0)/2.0) * rDx;
-          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (double)(i-(rX+1.0)/2.0) * rDx;
+          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 1.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
           pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
         }
       }
@@ -160,15 +160,15 @@ public:
     }
   }
 
-  void calculateMaxVelocity(double &maxv) {
+  void calculateMaxVelocity(PrecisionType &maxv) {
 
     maxv = 1.0f;
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++ ) {
-          maxv = std::max((double)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
-          maxv = std::max((double)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
         }
       }
     }
@@ -186,8 +186,8 @@ public:
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
 
-          double d2 = pow((Xc - (double)(i)),2) + pow((Yc - (double)(j)),2) + pow((Zc - (double)(k)),2);
-          double rr = pow(rX/6.0,2);
+          PrecisionType d2 = pow((Xc - (PrecisionType)(i)),2) + pow((Yc - (PrecisionType)(j)),2) + pow((Zc - (PrecisionType)(k)),2);
+          PrecisionType rr = pow(rX/6.0,2);
 
           if(d2 < rr) {
             for(uint d = 0; d < rDim; d++) {
@@ -218,12 +218,12 @@ public:
 
   PrecisionType * pVelocity;
 
-  const double & rDx;
-  const double rIdx;
-  const double & rOmega;
-  const double & rRo;
-  const double & rMu;
-  const double & rKa;
+  const PrecisionType & rDx;
+  const PrecisionType rIdx;
+  const PrecisionType & rOmega;
+  const PrecisionType & rRo;
+  const PrecisionType & rMu;
+  const PrecisionType & rKa;
 
   const uint & rBW;
   const uint rBWP;

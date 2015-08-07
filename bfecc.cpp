@@ -16,28 +16,6 @@
 #include "include/file_io.h"
 #include "include/interpolator.h"
 
-uint N          =  0;
-uint NB         =  0;
-uint NE         =  0;
-uint OutputStep =  0;
-uint Dim        =  0;
-
-double dx       =  0.0f;
-double idx      =  0.0f;
-double dt       =  0.1f;
-double pdt      =  0.1f;
-double h        = 16.0f;
-double omega    =  1.0f;
-double maxv     =  0.0f;
-double oldmaxv  =  0.0f;
-double CFL      =  0.8f;
-double cellSize =  1.0f;
-double diffTerm =  1.0e-5f;
-
-double ro       =  1.0f;
-double mu       =  1.93e-5;
-double ka       =  1.0e-5;
-
 #define WRITE_INIT_R(_STEP_)                                          \
 io.WriteGidMeshBin(N,N,N);                                    \
 io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");     \
@@ -54,15 +32,15 @@ if (OutputStep == 0) {                                                \
 }                                                                     \
 OutputStep--;                                                         \
 
-double calculateMaxDt_CFL(double CFL, double h, double maxv) {
+PrecisionType calculateMaxDt_CFL(PrecisionType CFL, PrecisionType h, PrecisionType maxv) {
   return CFL*h / maxv;
 }
 
-double calculateMaxDt_Fourier() {
+PrecisionType calculateMaxDt_Fourier() {
   return 0.0;
 }
 
-double calculatePressDt(double dt, double limit) {
+PrecisionType calculatePressDt(PrecisionType dt, PrecisionType limit) {
   int base = ceil(dt/limit);
   return dt/base;
 }
@@ -74,7 +52,28 @@ int main(int argc, char *argv[]) {
 #else
   int start, end;
 #endif
-  double duration = 0.0;
+  PrecisionType duration = 0.0;
+
+  uint N          =  0;
+  uint NB         =  0;
+  uint NE         =  0;
+  uint OutputStep =  0;
+  uint Dim        =  0;
+
+  PrecisionType dx       =  0.0f;
+  // PrecisionType idx      =  0.0f;
+  PrecisionType dt       =  0.1f;
+  PrecisionType pdt      =  0.1f;
+  PrecisionType h        = 16.0f;
+  PrecisionType omega    =  1.0f;
+  PrecisionType maxv     =  0.0f;
+  // PrecisionType oldmaxv  =  0.0f;
+  PrecisionType CFL      =  0.8f;
+  // PrecisionType cellSize =  1.0f;
+
+  PrecisionType ro       =  1.0f;
+  PrecisionType mu       =  1.93e-5;
+  PrecisionType ka       =  1.0e-5;
 
   N           = atoi(argv[1]);
   int steeps  = atoi(argv[2]);
@@ -84,7 +83,7 @@ int main(int argc, char *argv[]) {
   NE          = (N+BW)/NB;
 
   dx          = h/N;
-  idx         = 1.0/dx;
+  // idx         = 1.0/dx;
   Dim         = 3;
 
   FileIO io("grid",N);
@@ -155,8 +154,6 @@ int main(int argc, char *argv[]) {
   BfeccSolver   AdvectionSolver(block,dt,pdt);
   StencilSolver DiffusionSolver(block,dt,pdt);
 
-  DiffusionSolver.SetDiffTerm(diffTerm);
-
   WRITE_INIT_R(steeps/20)
 
   #pragma omp parallel
@@ -178,7 +175,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < steeps; i++) {
     AdvectionSolver.Execute();
     DiffusionSolver.Execute();
-    oldmaxv = maxv;
+    // oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
     pdt = calculatePressDt(dt,1.0f/(343.2f*343.2f));

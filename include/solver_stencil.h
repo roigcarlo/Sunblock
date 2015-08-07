@@ -33,7 +33,7 @@ private:
       const uint &Y,
       const uint &Z) {
 
-    double pressGrad[3];
+    PrecisionType pressGrad[3];
 
     pressGrad[0] = (
       pPressA[(cell + 1)] -
@@ -76,7 +76,7 @@ private:
       const uint &Y,
       const uint &Z) {
 
-    double pressGrad[3];
+    PrecisionType pressGrad[3];
 
     pressGrad[0] = 0.0f;// 1.0f/64.0f;
     pressGrad[1] = 0.0f;
@@ -90,7 +90,7 @@ private:
 
 public:
 
-  StencilSolver(Block * block, const double& Dt, const double& Pdt) :
+  StencilSolver(Block * block, const PrecisionType& Dt, const PrecisionType& Pdt) :
       Solver(block,Dt,Pdt) {
 
   }
@@ -234,7 +234,7 @@ public:
 
   }
 
-  void SetDiffTerm(double diffTerm) {
+  void SetDiffTerm(PrecisionType diffTerm) {
     mDiffTerm = diffTerm;
   }
 

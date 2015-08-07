@@ -73,6 +73,107 @@ public:
       }
     }
   }
+
+  union fui{
+    int32_t i; 
+    float f;
+  };
+
+  union dui{
+    int32_t i[2]; 
+    double d;
+  };
+
+  inline int exponent(double &value, uint exponent) {
+    dui a;
+    a.d = value;
+
+    exponent = 
+  }
+
+
+  // Doubles have:
+  // 01 Bits -> Sign
+  // 11 Bits -> Exp
+  // 52 Bits -> Fraction
+  inline void FlipDouble(double &value, uint index) {
+    if(index > 63) return;
+
+    int lohi = index > 31;
+    index = index % 31;
+
+    dui a;
+    a.d = value;
+
+    a.i[lohi] = a.i[lohi] ^ (0x1<<index);
+  }
+
+  inline void FlipDoubleSign(double &value) {
+    dui a;
+    a.d = value;
+
+    a.i[1] = a.i[1] ^ (0x1<<31);
+  }
+
+  inline void FlipDoubleExponent(double &value, uint index) {
+    if(index > 11) return;
+
+    dui a;
+    a.d = value;
+
+    a.i[1] = a.i[1] ^ (0x1<<(index+20));
+  }
+
+  inline void FlipDoubleFraction(double &value, uint index) {
+    if(index > 51) return;
+
+    int lohi = index > 31;
+    index = index % 31;
+
+    dui a;
+    a.d = value;
+
+    a.i[lohi] = a.i[lohi] ^ (0x1<<index);
+  }
+
+  // Floats have:
+  // 01 Bits -> Sign
+  // 08 Bits -> Exp
+  // 23 Bits -> Fraction
+  inline void FlipFloat(float &value, uint index) {
+    if(index > 31) return;
+
+    fui a;
+    a.f = value;
+
+    a.i = a.i ^ (0x1<<index);
+  }
+
+  inline void FlipFloatSign(float &value) {
+    fui a;
+    a.f = value;
+
+    a.i = a.i ^ (0x1<<31);
+  }
+
+  inline void FlipFloatExponent(float &value, uint index) {
+    if(index > 7) return;
+
+    fui a;
+    a.f = value;
+
+    a.i = a.i ^ (0x1<<(index + 23));
+  }
+
+  inline void FlipFloatFraction(float &value, uint index) {
+    if(index > 22) return;
+
+    fui a;
+    a.f = value;
+
+    a.i = a.i ^ (0x1<<index);
+  }
+
 private:
   bool use_cuda_pinned_mem;
 };
@@ -151,12 +252,12 @@ private:
 
 public:
 
-  static void GlobalToLocal(PrecisionType * coord, double f, const uint &dim) {
+  static void GlobalToLocal(PrecisionType * coord, PrecisionType f, const uint &dim) {
     for(uint d = 0; d < dim; d++)
       coord[d] *= f;
   }
 
-  static void LocalToGlobal(PrecisionType * coord, double f, const uint &dim) { 
+  static void LocalToGlobal(PrecisionType * coord, PrecisionType f, const uint &dim) { 
     for(uint d = 0; d < dim; d++)
       coord[d] /= f;
   }

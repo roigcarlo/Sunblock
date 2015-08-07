@@ -15,7 +15,7 @@ public:
   typedef Block::IndexType        IndexType;
   typedef TrilinealInterpolator   InterpolateType;
 
-  Solver(Block * block, const double& Dt, const double& Pdt) :
+  Solver(Block * block, const PrecisionType& Dt, const PrecisionType& Pdt) :
       pBlock(block),
       pPhiA(block->pPhiA),
       pPhiB(block->pPhiB),
@@ -109,14 +109,14 @@ protected:
 
   PrecisionType * pVelocity;
 
-  const double & rDx;
-  const double rIdx;
-  const double & rDt;
-  const double & rPdt;
+  const PrecisionType & rDx;
+  const PrecisionType rIdx;
+  const PrecisionType & rDt;
+  const PrecisionType & rPdt;
 
-  const double & rRo;
-  const double & rMu;
-  const double & rKa;
+  const PrecisionType & rRo;
+  const PrecisionType & rMu;
+  const PrecisionType & rKa;
 
   const uint & rBW;
   const uint rBWP;

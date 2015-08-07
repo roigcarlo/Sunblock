@@ -3,7 +3,7 @@
 class BfeccSolver : public Solver {
 public:
 
-  BfeccSolver(Block * block, const double& Dt, const double& Pdt) :
+  BfeccSolver(Block * block, const PrecisionType& Dt, const PrecisionType& Pdt) :
       Solver(block,Dt,Pdt) {
 
   }
