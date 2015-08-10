@@ -53,8 +53,8 @@ public:
 
     name_raw << name;
 
-    // GiD_OpenPostMeshFile(name_mesh.str().c_str(), GiD_PostAscii);
-    GiD_OpenPostResultFile(name_post.str().c_str(), GiD_PostBinary);
+    GiD_OpenPostMeshFile(name_mesh.str().c_str(), GiD_PostAscii);
+    GiD_OpenPostResultFile(name_post.str().c_str(), GiD_PostAscii);
 
     mesh_file = new std::ofstream(name_mesh.str().c_str());
     post_file = new std::ofstream(name_post.str().c_str());
@@ -249,7 +249,7 @@ public:
           elemi[4] = cell+(Z+BW)*(Y+BW);          elemi[5] = cell+1+(Z+BW)*(Y+BW);
           elemi[6] = cell+1+(Z+BW)*(Y+BW)+(Y+BW); elemi[7] = cell+(Z+BW)*(Y+BW)+(Y+BW);
 
-          GiD_WriteElementMat(cell++, elemi);
+          GiD_WriteElement(cell++, elemi);
         }
       }
     }
@@ -295,7 +295,7 @@ public:
           elemi[4] = cell+(Z+BW)*(Y+BW);          elemi[5] = cell+1+(Z+BW)*(Y+BW);
           elemi[6] = cell+1+(Z+BW)*(Y+BW)+(Y+BW); elemi[7] = cell+(Z+BW)*(Y+BW)+(Y+BW);
 
-          GiD_WriteElementMat(cell++, elemi);
+          GiD_WriteElement(cell++, elemi);
         }
       }
     }

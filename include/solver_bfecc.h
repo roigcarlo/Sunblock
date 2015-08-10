@@ -106,7 +106,7 @@ public:
           for(uint k = BOT(kk); k < TOP(kk); k++) {
             for(uint j = BOT(jj); j < TOP(jj); j++) {
               for(uint i = BOT(ii); i < TOP(ii); i++) {
-                Apply(pPhiD,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
+                Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
               }
             }
           }
@@ -149,6 +149,8 @@ public:
 
     for(uint d = 0; d < 3; d++) {
       displacement[d] = origin[d] + Sign * pVelocity[cell*rDim+d] * rDt;
+      if(displacement[d] < 0.0f)
+        printf("Error: Displacement for component %d: %f ( %f with velocity: %f) is lt 0\n",d,displacement[d],origin[d],pVelocity[cell*rDim+d]*rDt);
     }
 
     InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);

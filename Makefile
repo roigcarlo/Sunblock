@@ -4,7 +4,7 @@ OBJ = proxySolver.o bfecc.o
 CXXFLAGS = -Wall -Werror -pedantic -msse3 -mavx -mfma -O3
 CXXSAFEF = -Wall -Werror -pedantic -O3
 CONFIG   = -DUSE_NOVEC -DNO_USE_CUDA
-PROFILE  =
+PROFILE  = 
 OMP = -fopenmp
 OMP4 = -fopenmp-simd
 

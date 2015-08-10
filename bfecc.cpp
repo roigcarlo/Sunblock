@@ -19,15 +19,17 @@
 #define WRITE_INIT_R(_STEP_)                                          \
 io.WriteGidMeshBin(N,N,N);                                    \
 io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");     \
+io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,0,Dim,"GRD");     \
 io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
 io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,0    ,"PRES");    \
-OutputStep = _STEP_;                                                  \
+OutputStep = 0;                                                  \
 
 #define WRITE_RESULT(_STEP_)                                          \
 if (OutputStep == 0) {                                                \
-  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i,Dim,"TMP");   \
-  io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i,Dim,"VEL");   \
-  io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,i    ,"PRES");  \
+  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i+1,Dim,"TMP");   \
+  io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,i+1,Dim,"GRD");   \
+  io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i+1,Dim,"VEL");   \
+  io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,i+1    ,"PRES");  \
   OutputStep = _STEP_;                                                \
 }                                                                     \
 OutputStep--;                                                         \
@@ -67,7 +69,7 @@ int main(int argc, char *argv[]) {
   PrecisionType h        = 16.0f;
   PrecisionType omega    =  1.0f;
   PrecisionType maxv     =  0.0f;
-  // PrecisionType oldmaxv  =  0.0f;
+  PrecisionType oldmaxv  =  0.0f;
   PrecisionType CFL      =  0.8f;
   // PrecisionType cellSize =  1.0f;
 
@@ -154,7 +156,9 @@ int main(int argc, char *argv[]) {
   BfeccSolver   AdvectionSolver(block,dt,pdt);
   StencilSolver DiffusionSolver(block,dt,pdt);
 
-  WRITE_INIT_R(steeps/20)
+  int frec = steeps/steeps;
+
+  WRITE_INIT_R(frec)
 
   #pragma omp parallel
   #pragma omp single
@@ -173,14 +177,16 @@ int main(int argc, char *argv[]) {
   AdvectionSolver.Prepare();
 
   for (int i = 0; i < steeps; i++) {
-    AdvectionSolver.Execute();
-    DiffusionSolver.Execute();
-    // oldmaxv = maxv;
+
+    oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
     pdt = calculatePressDt(dt,1.0f/(343.2f*343.2f));
-    // printf("Step %d: %f -- %f, %f, %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
-    WRITE_RESULT(steeps/20)
+    printf("Step %d: %f -- %f, %f, MAXV: %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
+
+    AdvectionSolver.Execute();
+    DiffusionSolver.Execute();
+    WRITE_RESULT(frec)
   }
 
   AdvectionSolver.Finish();

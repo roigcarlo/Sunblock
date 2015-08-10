@@ -84,11 +84,18 @@ public:
     double d;
   };
 
-  inline int exponent(double &value, uint exponent) {
+  inline void getExponent(double &value, int exponent) {
     dui a;
     a.d = value;
 
-    exponent = 
+    exponent = ((a.i[1] & 0x7FF) >> 20 ) - 1023;
+  }
+
+  inline void getExponent(float &value, uint exponent) {
+    fui a;
+    a.f = value;
+
+    exponent = ((a.i & 0x7F8) >> 23 ) - 127;
   }
 
 

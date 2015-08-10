@@ -22,7 +22,7 @@ public:
       pPhiC(block->pPhiC),
       pPhiD(block->pPhiD),
       pPressA(block->pPressA),
-      pPressB(block->pPressA),
+      pPressB(block->pPressB),
       pVelocity(block->pVelocity),
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
