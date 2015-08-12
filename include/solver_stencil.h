@@ -26,7 +26,7 @@ private:
   }
 
   inline void gradientPressure(
-      PrecisionType * gridA,
+      PrecisionType * press,
       PrecisionType * gridB,
       const uint &cell,
       const uint &X,
@@ -36,16 +36,16 @@ private:
     PrecisionType pressGrad[3];
 
     pressGrad[0] = (
-      pPressA[(cell + 1)] -
-      pPressA[(cell - 1)]) * 0.5 * rIdx;
+      press[(cell + 1)] -
+      press[(cell - 1)]) * 0.5 * rIdx;
 
     pressGrad[1] = (
-      pPressA[(cell + (X+BW))] -
-      pPressA[(cell - (X+BW))]) * 0.5 * rIdx;
+      press[(cell + (X+BW))] -
+      press[(cell - (X+BW))]) * 0.5 * rIdx;
 
     pressGrad[2] = (
-      pPressA[(cell + (Y+BW)*(X+BW))] -
-      pPressA[(cell - (Y+BW)*(X+BW))]) * 0.5 * rIdx;
+      press[(cell + (Y+BW)*(X+BW))] -
+      press[(cell - (Y+BW)*(X+BW))]) * 0.5 * rIdx;
 
     for (uint d = 0; d < rDim; d++) {
       gridB[cell*rDim+d] = pressGrad[d];
@@ -65,34 +65,9 @@ private:
     }
 
     for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+0] += ((gridA[(cell+1)*rDim+d] + gridA[(cell-1)*rDim+d])  * 0.5 * rIdx);
-    }
-
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+1] += ((gridA[(cell + (X+BW))*rDim+d] + gridA[(cell - (X+BW))*rDim+d])  * 0.5 * rIdx);
-    }
-
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+2] += ((gridA[(cell + (Y+BW)*(X+BW))*rDim+d] + gridA[(cell - (Y+BW)*(X+BW))*rDim+d])  * 0.5 * rIdx);
-    }
-  }
-
-  inline void divergenceGradientVelocity2(
-      PrecisionType * gridA,
-      PrecisionType * gridB,
-      const uint &cell,
-      const uint &X,
-      const uint &Y,
-      const uint &Z) {
-
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = 0;
-    }
-
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] += ((gridA[(cell+1)*rDim+d]               - gridA[(cell-1)*rDim+d])  * 0.5 * rIdx);
-      gridB[cell*rDim+d] += ((gridA[(cell + (X+BW))*rDim+d]        - gridA[(cell - (X+BW))*rDim+d])  * 0.5 * rIdx);
-      gridB[cell*rDim+d] += ((gridA[(cell + (Y+BW)*(X+BW))*rDim+d] - gridA[(cell - (Y+BW)*(X+BW))*rDim+d])  * 0.5 * rIdx);
+      gridB[cell*rDim+d] += ((gridA[(cell + 1)            *rDim+d] - gridA[(cell - 1)            *rDim+d]) * 0.5 * rIdx);
+      gridB[cell*rDim+d] += ((gridA[(cell + (X+BW))       *rDim+d] - gridA[(cell - (X+BW))       *rDim+d]) * 0.5 * rIdx);
+      gridB[cell*rDim+d] += ((gridA[(cell + (Y+BW)*(X+BW))*rDim+d] - gridA[(cell - (Y+BW)*(X+BW))*rDim+d]) * 0.5 * rIdx);
     }
   }
 
@@ -106,8 +81,8 @@ private:
 
     gridB[cell] = 0;
 
-    gridB[cell] += ((gridA[(cell+1)*rDim+0]               - gridA[(cell-1)*rDim+0]) * 0.5 * rIdx);
-    gridB[cell] += ((gridA[(cell + (X+BW))*rDim+1]        - gridA[(cell - (X+BW))*rDim+1]) * 0.5 * rIdx);
+    gridB[cell] += ((gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5 * rIdx);
+    gridB[cell] += ((gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5 * rIdx);
     gridB[cell] += ((gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5 * rIdx);
   }
 
@@ -159,7 +134,7 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          gradientPressure(pPhiA,pPhiB,cell++,rX,rY,rZ);
+          gradientPressure(pPressA,pPhiB,cell++,rX,rY,rZ);
         }
       }
     }
@@ -170,7 +145,7 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          divergenceGradientVelocity2(pPhiA,pPhiD,cell++,rX,rY,rZ);
+          stencilCross(pPhiA,pPhiD,cell++,rX,rY,rZ);
         }
       }
     }
@@ -181,18 +156,17 @@ public:
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
           for (uint d = 0; d < rDim; d++) {
-            pPhiD[cell*rDim+d] = -rMu * pPhiD[cell*rDim+d] + pPhiB[cell*rDim+d];
-            pPhiA[cell*rDim+d] = pPhiA[cell*rDim+d] - pPhiD[cell*rDim+d] * rDt;
+            pPhiA[cell*rDim+d] = pPhiA[cell*rDim+d] + (-rMu * pPhiD[cell*rDim+d] + pPhiB[cell*rDim+d]) * rDt;
           }
           cell++;
         }
       }
     }
 
-    copyLeft(pPhiA);
-    copyRight(pPhiA);
+    copyLeft(pPhiA,3);
+    copyRight(pPhiA,3);
 
-    printf("%f\n",rDt/rPdt);
+    printf("SUBS: %f ---- %f ---- %f\n",rDt,rPdt,rDt/rPdt);
     for(uint ss = 0 ; ss < 1; ss++) {
 
       for(uint k = rBWP; k < rZ + rBWP; k++) {
@@ -200,20 +174,21 @@ public:
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
             divergenceVelocity(pPhiA,pPressB,cell,rX,rY,rZ);
-            pPressB[cell] *= -rRo * 343.2f*343.2f * rPdt * 0.0001;
+            pPressB[cell] = pPressB[cell] * -rRo * 343.2f * 343.2f * rPdt;
             cell++;
           }
         }
       }
 
-      std::swap(pPressA,pPressB);
+      copyAll(pPressB,1);
 
       for(uint k = rBWP; k < rZ + rBWP; k++) {
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            gradientPressure(pPhiB,pPhiB,cell,rX,rY,rZ);
+            gradientPressure(pPressB,pPhiB,cell,rX,rY,rZ);
             for (uint d = 0; d < rDim; d++) {
+              pPhiC[cell*rDim+d] = pPressB[cell];
               pPhiA[cell*rDim+d] += pPhiB[cell*rDim+d] * rPdt;
             }
             cell++;
@@ -221,22 +196,20 @@ public:
         }
       }
 
-      std::swap(pPressA,pPressB);
+      for(uint k = rBWP; k < rZ + rBWP; k++) {
+        for(uint j = rBWP; j < rY + rBWP; j++) {
+          uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+          for(uint i = rBWP; i < rX + rBWP; i++) {
+            pPressA[cell] += pPressB[cell];
+            cell++;
+          }
+        }
+      } 
 
-      // for(uint k = rBWP; k < rZ + rBWP; k++) {
-      //   for(uint j = rBWP; j < rY + rBWP; j++) {
-      //     uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-      //     for(uint i = rBWP; i < rX + rBWP; i++) {
-      //       pPressA[cell] += pPressB[cell];
-      //       cell++;
-      //     }
-      //   }
-      // } 
+      copyLeft(pPhiA,3);
+      copyRight(pPhiA,3);
 
     }
-
-    copyLeft(pPhiA);
-    copyRight(pPhiA);
 
     // copyLeftToRight(pPhiA);
 

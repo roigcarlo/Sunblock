@@ -71,6 +71,7 @@ int main(int argc, char *argv[]) {
   PrecisionType maxv     =  0.0f;
   PrecisionType oldmaxv  =  0.0f;
   PrecisionType CFL      =  0.8f;
+  PrecisionType cc2      =  343.2f*343.2f;
   // PrecisionType cellSize =  1.0f;
 
   PrecisionType ro       =  1.0f;
@@ -149,7 +150,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  pdt = calculatePressDt(dt,1.0f/(343.2f*343.2f));
+  pdt = ro/cc2;
 
   printf("Calculated dt: %f -- %f, %f, %f \n",dt,CFL,h/N,maxv);
 
@@ -181,7 +182,7 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    pdt = calculatePressDt(dt,1.0f/(343.2f*343.2f));
+    pdt = ro/cc2;
     printf("Step %d: %f -- %f, %f, MAXV: %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
 
     AdvectionSolver.Execute();

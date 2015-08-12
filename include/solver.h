@@ -44,14 +44,36 @@ public:
   ~Solver() {
   }
 
+  void copyAll(
+      PrecisionType * Phi,
+      uint dim
+    ) {
+
+    for(uint a = 0; a < rY + rBW; a++) {
+      for(uint b = 0; b < rX + rBW; b++) {
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(0,a,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(1,a,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+          Phi[IndexType::GetIndex(a,0,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(a,1,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+          Phi[IndexType::GetIndex(a,b,0,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(a,b,1,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+
+          Phi[IndexType::GetIndex(rX + rBW - 1,a,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,a,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+          Phi[IndexType::GetIndex(a,rY + rBW - 1,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(a,rY + rBW - 2,b,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+          Phi[IndexType::GetIndex(a,b,rZ + rBW - 1,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(a,b,rZ + rBW - 2,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+        }
+      }
+    }
+  
+  }
+
   void copyLeft(
-      PrecisionType * Phi
+      PrecisionType * Phi,
+      uint dim
     ) {
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < rDim; d++) {
-          Phi[IndexType::GetIndex(0,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d] = Phi[IndexType::GetIndex(1,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d];
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(0,j,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(1,j,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
         }
       }
     }
@@ -59,27 +81,90 @@ public:
   }
 
   void copyRight(
-      PrecisionType * Phi
+      PrecisionType * Phi,
+      uint dim
     ) {
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < rDim; d++) {
-          Phi[IndexType::GetIndex(rX + rBW - 1,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d];
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(rX + rBW - 1,j,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,j,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
         }
       }
     }
 
   }
 
+    void copyDown(
+      PrecisionType * Phi,
+      uint dim
+    ) {
+
+    for(uint i = 0; i < rX + rBW; i++) {
+      for(uint k = 0; k < rZ + rBW; k++) {
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(i,0,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(i,1,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+        }
+      }
+    }
+
+  }
+
+  void copyUp(
+      PrecisionType * Phi,
+      uint dim
+    ) {
+
+    for(uint i = 0; i < rX + rBW; i++) {
+      for(uint k = 0; k < rZ + rBW; k++) {
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(i,rY + rBW - 1,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(i,rY + rBW - 2,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+        }
+      }
+    }
+  
+  }
+
+  void copyBack(
+      PrecisionType * Phi,
+      uint dim
+    ) {
+
+    for(uint i = 0; i < rX + rBW; i++) {
+      for(uint j = 0; j < rY + rBW; j++) {
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(i,j,0,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(i,j,1,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+        }
+      }
+    }
+  }
+
+  void copyFront(
+      PrecisionType * Phi,
+      uint dim
+    ) {
+
+    for(uint i = 0; i < rX + rBW; i++) {
+      for(uint j = 0; j < rY + rBW; j++) {
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(i,j,rZ + rBW - 1,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(i,j,rZ + rBW - 2,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
+        }
+      }
+    }
+  
+  }
+
+  //////////////////////////////////////////
+
   void copyLeftToRight(
-      PrecisionType * Phi
+      PrecisionType * Phi,
+      uint dim
     ) {
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < rDim; d++) {
-          Phi[IndexType::GetIndex(0,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,j,k,pBlock->mPaddY,pBlock->mPaddZ)*rDim+d];
+        for(uint d = 0; d < dim; d++) {
+          Phi[IndexType::GetIndex(0,j,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d] = Phi[IndexType::GetIndex(rX + rBW - 2,j,k,pBlock->mPaddY,pBlock->mPaddZ)*dim+d];
         }
       }
     }

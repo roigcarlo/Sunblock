@@ -90,8 +90,8 @@ public:
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
           for(uint d = 0; d < 1; d++) {
-            pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = (i+1.0)/(rX-1.0) - 1.0/rX;
-            pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = (i+1.0)/(rX-1.0) - 1.0/rX;
+            pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = i * 0.082f;
+            pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = i * 0.082f;
           }
         }
       }
