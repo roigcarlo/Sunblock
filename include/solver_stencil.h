@@ -95,7 +95,7 @@ private:
 
     gridB[cell] += (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5f * rIdx;
     gridB[cell] += (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5f * rIdx;
-    gridB[cell] += (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5f * rIdx; 
+    gridB[cell] += (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5f * rIdx;
   }
 
   inline void divergenceVelocityP(
@@ -161,13 +161,25 @@ public:
    **/
   void Execute() {
 
+    // Alias for the buffers
+    PrecisionType * phi               = pPhiA;
+    PrecisionType * pressure          = pPressA;
+    PrecisionType * pressureGradient  = pPhiB;
+    PrecisionType * phiLapplacian     = pPhiC;
+
+    PrecisionType * phiDivergence     = pPressB;
+    PrecisionType * pressDiff         = pPressB;
+
+    PrecisionType force[3]            = {0.0f, 0.0f, -9.8f};
+
+
     // Apply the pressure gradient
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          gradientPressure(pPressA,pPhiB,cell++,rX,rY,rZ);
+          gradientPressure(pressure,pressureGradient,cell++,rX,rY,rZ);
         }
       }
     }
@@ -178,7 +190,7 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          stencilCross(pPhiA,pPhiD,cell++,rX,rY,rZ);
+          stencilCross(phi,phiLapplacian,cell++,rX,rY,rZ);
         }
       }
     }
@@ -189,15 +201,12 @@ public:
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
           for (uint d = 0; d < rDim; d++) {
-            pPhiA[cell*rDim+d] = pPhiA[cell*rDim+d] + (-rMu * pPhiD[cell*rDim+d] + pPhiB[cell*rDim+d]) * rDt;
+            phi[cell*rDim+d] += (-rMu * phiLapplacian[cell*rDim+d] + pressureGradient[cell*rDim+d] + rRo * force[rDim+d]) * rDt;
           }
           cell++;
         }
       }
     }
-
-    copyLeft(pPhiA,3);
-    copyRight(pPhiA,3);
 
     printf("SUBS: %f ---- %f ---- %f\n",rDt,rPdt,rDt/rPdt);
 
@@ -207,27 +216,20 @@ public:
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            //if(j==rBWP && k==rBWP)
-            printf("%d %d %d\n",i,j,k);
-            divergenceVelocityP(pPhiA,pPressB,cell,rX,rY,rZ);
-            //else
-            //divergenceVelocity(pPhiA,pPressB,cell,rX,rY,rZ);
-            pPressB[cell] *= -rRo*rCC2*rPdt;
+            divergenceVelocity(phi,phiDivergence,cell,rX,rY,rZ);
+            pressDiff[cell] = phiDivergence[cell] * -rRo*rCC2*rPdt;
             cell++;
           }
         }
       }
 
-      copyAll(pPressB,1);
-
       for(uint k = rBWP; k < rZ + rBWP; k++) {
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            gradientPressure(pPressB,pPhiB,cell,rX,rY,rZ);
+            gradientPressure(pressDiff,pressureGradient,cell,rX,rY,rZ);
             for (uint d = 0; d < rDim; d++) {
-              pPhiC[cell*rDim+d] = pPressB[cell];
-              pPhiA[cell*rDim+d] += pPhiB[cell*rDim+d] * rPdt;
+              phi[cell*rDim+d] += pressureGradient[cell*rDim+d] * rPdt;
             }
             cell++;
           }
@@ -238,18 +240,13 @@ public:
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            pPressA[cell] += pPressB[cell];
+            pressure[cell] += pressDiff[cell];
             cell++;
           }
         }
-      } 
-
-      copyLeft(pPhiA,3);
-      copyRight(pPhiA,3);
+      }
 
     }
-
-    // copyLeftToRight(pPhiA);
 
   }
 

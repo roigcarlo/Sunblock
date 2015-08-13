@@ -82,30 +82,30 @@ int main(int argc, char *argv[]) {
 
   Block      * block = NULL;
 
-  PrecisionType[4] * step0 = NULL;
-  PrecisionType[4] * step1 = NULL;
-  PrecisionType[4] * step2 = NULL;
-  PrecisionType[4] * step3 = NULL;
+  PrecisionType * step0 = NULL;
+  PrecisionType * step1 = NULL;
+  PrecisionType * step2 = NULL;
+  PrecisionType * step3 = NULL;
 
-  PrecisionType[2] * pres0 = NULL;
-  PrecisionType[2] * pres1 = NULL;
+  PrecisionType * pres0 = NULL;
+  PrecisionType * pres1 = NULL;
 
-  Variable3D * velf0 = NULL;
+  PrecisionType * velf0 = NULL;
 
   MemManager memmrg(false);
 
   // Variable
-  memmrg.AllocateGrid(&step0, N, N, N, 1);
-  memmrg.AllocateGrid(&step1, N, N, N, 1);
-  memmrg.AllocateGrid(&step2, N, N, N, 1);
-  memmrg.AllocateGrid(&step3, N, N, N, 1);
+  memmrg.AllocateGrid(&step0, N, N, N, 3, 1);
+  memmrg.AllocateGrid(&step1, N, N, N, 3, 1);
+  memmrg.AllocateGrid(&step2, N, N, N, 3, 1);
+  memmrg.AllocateGrid(&step3, N, N, N, 3, 1);
 
   // Pressure
-  memmrg.AllocateGrid(&pres0, N, N, N, 1);
-  memmrg.AllocateGrid(&pres1, N, N, N, 1);
+  memmrg.AllocateGrid(&pres0, N, N, N, 1, 1);
+  memmrg.AllocateGrid(&pres1, N, N, N, 1, 1);
 
   // Velocity
-  memmrg.AllocateGrid(&velf0, N, N, N, 1);
+  memmrg.AllocateGrid(&velf0, N, N, N, 3, 1);
 
   printf("Allocation correct\n");
   printf("Initialize\n");

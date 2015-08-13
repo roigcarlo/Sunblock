@@ -17,10 +17,10 @@ public:
   ~MemManager(){}
 
   template <typename T>
-  void AllocateGrid(T ** grid, const uint &X, const uint &Y, const uint &Z, const uint align) {
+  void AllocateGrid(T ** grid, const uint &X, const uint &Y, const uint &Z, const uint &len, const uint align) {
 
     uint elements     = (X+BW) * (Y+BW) * (Z+BW);
-    uint element_size = sizeof(T);
+    uint element_size = sizeof(T) * len;
 
     uint size         = elements * element_size;
 
@@ -75,12 +75,12 @@ public:
   }
 
   union fui{
-    int32_t i; 
+    int32_t i;
     float f;
   };
 
   union dui{
-    int32_t i[2]; 
+    int32_t i[2];
     double d;
   };
 
@@ -264,7 +264,7 @@ public:
       coord[d] *= f;
   }
 
-  static void LocalToGlobal(PrecisionType * coord, PrecisionType f, const uint &dim) { 
+  static void LocalToGlobal(PrecisionType * coord, PrecisionType f, const uint &dim) {
     for(uint d = 0; d < dim; d++)
       coord[d] /= f;
   }

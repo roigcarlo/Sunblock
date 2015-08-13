@@ -32,9 +32,6 @@ public:
       }
     }
 
-    copyLeft(pPhiB,3);
-    copyRight(pPhiB,3);
-
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
@@ -44,9 +41,6 @@ public:
       }
     }
 
-    copyLeft(pPhiC,3);
-    copyRight(pPhiC,3);
-
     #pragma omp parallel for
     for(uint k = rBWP; k < rZ + rBWP; k++) {
       for(uint j = rBWP; j < rY + rBWP; j++) {
@@ -55,9 +49,6 @@ public:
         }
       }
     }
-
-    copyLeft(pPhiA,3);
-    copyRight(pPhiA,3);
 
   }
 
