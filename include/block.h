@@ -22,6 +22,7 @@ public:
       const PrecisionType &Ro,
       const PrecisionType &Mu,
       const PrecisionType &Ka,
+      const PrecisionType &CC2,
       const uint &BW,
       const uint &X, const uint &Y, const uint &Z,
       const uint &NB, const uint &NE, const uint &DIM) :
@@ -38,6 +39,7 @@ public:
     rRo(Ro),
     rMu(Mu),
     rKa(Ka),
+    rCC2(CC2),
     rBW(BW),
     rBWP(BW/2),
     rX(X),
@@ -90,8 +92,8 @@ public:
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
           for(uint d = 0; d < 1; d++) {
-            pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = i * 0.082f;
-            pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = i * 0.082f;
+            pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = (PrecisionType)i * 0.082f;
+            pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = (PrecisionType)i * 0.082f;
           }
         }
       }
@@ -225,6 +227,7 @@ public:
   const PrecisionType & rRo;
   const PrecisionType & rMu;
   const PrecisionType & rKa;
+  const PrecisionType & rCC2;
 
   const uint & rBW;
   const uint rBWP;

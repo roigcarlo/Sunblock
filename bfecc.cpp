@@ -17,19 +17,18 @@
 #include "include/interpolator.h"
 
 #define WRITE_INIT_R(_STEP_)                                          \
-io.WriteGidMeshBin(N,N,N);                                    \
+io.WriteGidMeshBin(N,N,N);                                            \
 io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");     \
 io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,0,Dim,"GRD");     \
 io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
 io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,0    ,"PRES");    \
-OutputStep = 0;                                                  \
 
 #define WRITE_RESULT(_STEP_)                                          \
 if (OutputStep == 0) {                                                \
-  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i+1,Dim,"TMP");   \
-  io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,i+1,Dim,"GRD");   \
-  io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i+1,Dim,"VEL");   \
-  io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,i+1    ,"PRES");  \
+  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i+1,Dim,"TMP"); \
+  io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,i+1,Dim,"GRD"); \
+  io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i+1,Dim,"VEL"); \
+  io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,i+1    ,"PRES");\
   OutputStep = _STEP_;                                                \
 }                                                                     \
 OutputStep--;                                                         \
@@ -56,38 +55,28 @@ int main(int argc, char *argv[]) {
 #endif
   PrecisionType duration = 0.0;
 
-  uint N          =  0;
-  uint NB         =  0;
-  uint NE         =  0;
-  uint OutputStep =  0;
-  uint Dim        =  0;
+  uint N          = atoi(argv[1]);
+  uint steeps     = atoi(argv[2]);
+  uint NB         = atoi(argv[4]);
+  uint NE         = (N+BW)/NB;
+  uint OutputStep = 0;
+  uint Dim        = 3;
+  uint frec       = steeps/steeps;
 
-  PrecisionType dx       =  0.0f;
-  // PrecisionType idx      =  0.0f;
-  PrecisionType dt       =  0.1f;
-  PrecisionType pdt      =  0.1f;
-  PrecisionType h        = 16.0f;
-  PrecisionType omega    =  1.0f;
-  PrecisionType maxv     =  0.0f;
-  PrecisionType oldmaxv  =  0.0f;
-  PrecisionType CFL      =  0.8f;
-  PrecisionType cc2      =  343.2f*343.2f;
-  // PrecisionType cellSize =  1.0f;
+  PrecisionType h        = atoi(argv[3]);
+  PrecisionType omega    = 1.0f;
+  PrecisionType maxv     = 0.0f;
+  PrecisionType oldmaxv  = 0.0f;
+  PrecisionType CFL      = 0.8f;
 
-  PrecisionType ro       =  1.0f;
-  PrecisionType mu       =  1.93e-5;
-  PrecisionType ka       =  1.0e-5;
+  PrecisionType dx       = h/(PrecisionType)N;
+  PrecisionType dt       = 0.1f;
+  PrecisionType pdt      = 0.1f;
 
-  N           = atoi(argv[1]);
-  int steeps  = atoi(argv[2]);
-  h           = atoi(argv[3]);
-
-  NB          = atoi(argv[4]);
-  NE          = (N+BW)/NB;
-
-  dx          = h/N;
-  // idx         = 1.0/dx;
-  Dim         = 3;
+  PrecisionType ro       = 1.0f;
+  PrecisionType mu       = 1.93e-5f;
+  PrecisionType ka       = 1.0e-5f;
+  PrecisionType cc2      = 343.2f*343.2f;
 
   FileIO io("grid",N);
 
@@ -134,6 +123,7 @@ int main(int argc, char *argv[]) {
     ro,
     mu,
     ka,
+    cc2,
     BW,
     N,
     N,
@@ -157,8 +147,6 @@ int main(int argc, char *argv[]) {
   BfeccSolver   AdvectionSolver(block,dt,pdt);
   StencilSolver DiffusionSolver(block,dt,pdt);
 
-  int frec = steeps/steeps;
-
   WRITE_INIT_R(frec)
 
   #pragma omp parallel
@@ -177,7 +165,7 @@ int main(int argc, char *argv[]) {
 
   AdvectionSolver.Prepare();
 
-  for (int i = 0; i < steeps; i++) {
+  for (uint i = 0; i < steeps; i++) {
 
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);

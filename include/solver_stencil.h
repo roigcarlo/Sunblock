@@ -37,38 +37,50 @@ private:
 
     pressGrad[0] = (
       press[(cell + 1)] -
-      press[(cell - 1)]) * 0.5 * rIdx;
+      press[(cell - 1)]);
 
     pressGrad[1] = (
       press[(cell + (X+BW))] -
-      press[(cell - (X+BW))]) * 0.5 * rIdx;
+      press[(cell - (X+BW))]);
 
     pressGrad[2] = (
       press[(cell + (Y+BW)*(X+BW))] -
-      press[(cell - (Y+BW)*(X+BW))]) * 0.5 * rIdx;
+      press[(cell - (Y+BW)*(X+BW))]);
 
     for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = pressGrad[d];
+      gridB[cell*rDim+d] = pressGrad[d] * 0.5f * rIdx;
     }
   }
 
-  inline void divergenceGradientVelocity(
-      PrecisionType * gridA,
+  inline void gradientPressureP(
+      PrecisionType * press,
       PrecisionType * gridB,
       const uint &cell,
       const uint &X,
       const uint &Y,
       const uint &Z) {
 
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = 0;
-    }
+    PrecisionType pressGrad[3];
+
+    pressGrad[0] = (
+      press[(cell + 1)] -
+      press[(cell - 1)]);
+
+    pressGrad[1] = (
+      press[(cell + (X+BW))] -
+      press[(cell - (X+BW))]);
+
+    pressGrad[2] = (
+      press[(cell + (Y+BW)*(X+BW))] -
+      press[(cell - (Y+BW)*(X+BW))]);
 
     for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] += ((gridA[(cell + 1)            *rDim+d] - gridA[(cell - 1)            *rDim+d]) * 0.5 * rIdx);
-      gridB[cell*rDim+d] += ((gridA[(cell + (X+BW))       *rDim+d] - gridA[(cell - (X+BW))       *rDim+d]) * 0.5 * rIdx);
-      gridB[cell*rDim+d] += ((gridA[(cell + (Y+BW)*(X+BW))*rDim+d] - gridA[(cell - (Y+BW)*(X+BW))*rDim+d]) * 0.5 * rIdx);
+      gridB[cell*rDim+d] = pressGrad[d] * 0.5f * rIdx;
     }
+
+    printf("\t:%.10f --- %.10f --- %.10f\n",press[(cell + 1)],press[(cell - 1)],gridB[cell*rDim+0]);
+    printf("\t:%.10f --- %.10f --- %.10f\n",press[(cell + (X+BW))],press[(cell - (X+BW))],gridB[cell*rDim+1]);
+    printf("\t:%.10f --- %.10f --- %.10f\n",press[(cell + (Y+BW)*(X+BW))],press[(cell - (Y+BW)*(X+BW))],gridB[cell*rDim+2]);
   }
 
   inline void divergenceVelocity(
@@ -81,9 +93,30 @@ private:
 
     gridB[cell] = 0;
 
-    gridB[cell] += ((gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5 * rIdx);
-    gridB[cell] += ((gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5 * rIdx);
-    gridB[cell] += ((gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5 * rIdx);
+    gridB[cell] += (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5f * rIdx;
+    gridB[cell] += (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5f * rIdx;
+    gridB[cell] += (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5f * rIdx; 
+  }
+
+  inline void divergenceVelocityP(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const uint &cell,
+      const uint &X,
+      const uint &Y,
+      const uint &Z) {
+
+    gridB[cell] = 0;
+
+    PrecisionType a = (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]);
+    PrecisionType b = (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]);
+    PrecisionType c = (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]);
+
+    printf("\t:%.17f --- %.17f --- %.17f\n",gridA[(cell+1) *rDim+0],gridA[(cell-1)*rDim+0],a);
+    printf("\t:%.17f --- %.17f --- %.17f\n",gridA[(cell+(X+BW))*rDim+1],gridA[(cell-(X+BW))*rDim+1],b);
+    printf("\t:%.17f --- %.17f --- %.17f\n",gridA[(cell+(Y+BW)*(X+BW))*rDim+2],gridA[(cell-(Y+BW)*(X+BW))*rDim+2],c);
+
+    gridB[cell] = (a + b + c) * 0.5f * rIdx;
   }
 
   inline void fixedGradient(
@@ -167,14 +200,19 @@ public:
     copyRight(pPhiA,3);
 
     printf("SUBS: %f ---- %f ---- %f\n",rDt,rPdt,rDt/rPdt);
+
     for(uint ss = 0 ; ss < 1; ss++) {
 
       for(uint k = rBWP; k < rZ + rBWP; k++) {
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            divergenceVelocity(pPhiA,pPressB,cell,rX,rY,rZ);
-            pPressB[cell] = pPressB[cell] * -rRo * 343.2f * 343.2f * rPdt;
+            //if(j==rBWP && k==rBWP)
+            printf("%d %d %d\n",i,j,k);
+            divergenceVelocityP(pPhiA,pPressB,cell,rX,rY,rZ);
+            //else
+            //divergenceVelocity(pPhiA,pPressB,cell,rX,rY,rZ);
+            pPressB[cell] *= -rRo*rCC2*rPdt;
             cell++;
           }
         }

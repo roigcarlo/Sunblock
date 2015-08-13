@@ -31,6 +31,7 @@ public:
       rRo(block->rRo),
       rMu(block->rMu),
       rKa(block->rKa),
+      rCC2(block->rCC2),
       rBW(block->rBW),
       rBWP(block->rBW/2),
       rX(block->rX),
@@ -202,6 +203,8 @@ protected:
   const PrecisionType & rRo;
   const PrecisionType & rMu;
   const PrecisionType & rKa;
+
+  const PrecisionType & rCC2;
 
   const uint & rBW;
   const uint rBWP;
