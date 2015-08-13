@@ -37,10 +37,6 @@ const uint MAX_DIM         = 3;
 const uint BWP             = BW / 2;   //  Boundary padding
 const PrecisionType ONESIX = 1.0/6.0;
 
-typedef PrecisionType Variable1D[1];
-typedef PrecisionType Variable2D[2];
-typedef PrecisionType Variable3D[3];
-
 #define DIMENSION(A) sizeof(A)/sizeof(PrecisionType)
 
 #endif

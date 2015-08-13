@@ -82,13 +82,13 @@ int main(int argc, char *argv[]) {
 
   Block      * block = NULL;
 
-  Variable3D * step0 = NULL;
-  Variable3D * step1 = NULL;
-  Variable3D * step2 = NULL;
-  Variable3D * step3 = NULL;
+  PrecisionType[4] * step0 = NULL;
+  PrecisionType[4] * step1 = NULL;
+  PrecisionType[4] * step2 = NULL;
+  PrecisionType[4] * step3 = NULL;
 
-  Variable1D * pres0 = NULL;
-  Variable1D * pres1 = NULL;
+  PrecisionType[2] * pres0 = NULL;
+  PrecisionType[2] * pres1 = NULL;
 
   Variable3D * velf0 = NULL;
 
