@@ -240,7 +240,7 @@ public:
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            pressure[cell] += pressDiff[cell];
+            pressure[cell] -= pressDiff[cell];
             cell++;
           }
         }
