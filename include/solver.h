@@ -108,7 +108,7 @@ public:
 
   }
 
-    void copyDown(
+  void copyDown(
       PrecisionType * buff,
       uint dim
     ) {
@@ -183,8 +183,6 @@ public:
     #undef INDEX
 
   }
-
-  //////////////////////////////////////////
 
   void copyLeftToRight(
       PrecisionType * buff,
