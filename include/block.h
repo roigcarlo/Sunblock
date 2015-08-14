@@ -17,6 +17,7 @@ public:
       PrecisionType * PressA,
       PrecisionType * PressB,
       PrecisionType * Field,
+      uint * Flags,
       const PrecisionType &Dx,
       const PrecisionType &Omega,
       const PrecisionType &Ro,
@@ -33,6 +34,7 @@ public:
     pPressA(PressA),
     pPressB(PressB),
     pVelocity(Field),
+    pFlags(Flags),
     rDx(Dx),
     rIdx(1.0/Dx),
     rOmega(Omega),
@@ -91,10 +93,8 @@ public:
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
-          for(uint d = 0; d < 1; d++) {
-            pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = (PrecisionType)i * 0.082f;
-            pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*1+d] = (PrecisionType)i * 0.082f;
-          }
+          pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = -9.8f * (1.0f/(rZ-1)) * (PrecisionType)(k-1.0f);
+          pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = -9.8f * (1.0f/(rZ-1)) * (PrecisionType)(k-1.0f);
         }
       }
     }
@@ -220,6 +220,8 @@ public:
   PrecisionType * pPressB;
 
   PrecisionType * pVelocity;
+
+  uint * pFlags;
 
   const PrecisionType & rDx;
   const PrecisionType rIdx;

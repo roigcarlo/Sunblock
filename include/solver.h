@@ -24,6 +24,7 @@ public:
       pPressA(block->pPressA),
       pPressB(block->pPressB),
       pVelocity(block->pVelocity),
+      pFlags(block->pFlags),
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
       rDt(Dt),
@@ -225,6 +226,8 @@ protected:
   PrecisionType * pPressB;
 
   PrecisionType * pVelocity;
+
+  uint * pFlags;
 
   const PrecisionType & rDx;
   const PrecisionType rIdx;

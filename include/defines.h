@@ -39,4 +39,11 @@ const PrecisionType ONESIX = 1.0/6.0;
 
 #define DIMENSION(A) sizeof(A)/sizeof(PrecisionType)
 
+enum Flag {
+    FIXED_VELOCITY_X = 0x000001,
+    FIXED_VELOCITY_Y = 0x000010,
+    FIXED_VELOCITY_Z = 0x000100,
+    FIXED_PRESSURE   = 0x001000
+};
+
 #endif

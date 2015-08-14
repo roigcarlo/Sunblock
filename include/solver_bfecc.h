@@ -146,8 +146,12 @@ public:
 
     InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);
 
-    for(uint d = 0; d < rDim; d++) {
-      Phi[cell*rDim+d] = WeightA * PhiAuxA[cell*rDim+d] + WeightB * iPhi[d];
-    }
+    // TODO: This provably only needs to be done in the last part. Take into account that
+    if(!(pFlags[cell] & FIXED_VELOCITY_X))
+      Phi[cell*rDim+0] = WeightA * PhiAuxA[cell*rDim+0] + WeightB * iPhi[0];
+    if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+      Phi[cell*rDim+1] = WeightA * PhiAuxA[cell*rDim+1] + WeightB * iPhi[1];
+    if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+      Phi[cell*rDim+2] = WeightA * PhiAuxA[cell*rDim+2] + WeightB * iPhi[2];
   }
 };

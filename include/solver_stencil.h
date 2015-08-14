@@ -165,7 +165,7 @@ public:
     PrecisionType * phi               = pPhiA;
     PrecisionType * pressure          = pPressA;
     PrecisionType * pressureGradient  = pPhiB;
-    PrecisionType * phiLapplacian     = pPhiC;
+    PrecisionType * phiLapplacian     = pPhiD;
 
     PrecisionType * phiDivergence     = pPressB;
     PrecisionType * pressDiff         = pPressB;
@@ -200,8 +200,14 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          for (uint d = 0; d < rDim; d++) {
-            phi[cell*rDim+d] += (-rMu * phiLapplacian[cell*rDim+d] + pressureGradient[cell*rDim+d] + rRo * force[rDim+d]) * rDt;
+          if(!(pFlags[cell] & FIXED_VELOCITY_X))
+            phi[cell*rDim+0] += (-rMu * phiLapplacian[cell*rDim+0] + pressureGradient[cell*rDim+0] + rRo * force[rDim+0]) * rDt;
+          if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+            phi[cell*rDim+1] += (-rMu * phiLapplacian[cell*rDim+1] + pressureGradient[cell*rDim+1] + rRo * force[rDim+1]) * rDt;
+          if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+            phi[cell*rDim+2] += (-rMu * phiLapplacian[cell*rDim+2] + pressureGradient[cell*rDim+2] + rRo * force[rDim+2]) * rDt;
+          for(uint d = 0; d < 3; d++) {
+            pPhiC[cell*rDim+d] = phiLapplacian[cell*rDim+d];
           }
           cell++;
         }
@@ -210,7 +216,7 @@ public:
 
     printf("SUBS: %f ---- %f ---- %f\n",rDt,rPdt,rDt/rPdt);
 
-    for(uint ss = 0 ; ss < 1; ss++) {
+    for(uint ss = 0 ; ss < rDt/rPdt; ss++) {
 
       for(uint k = rBWP; k < rZ + rBWP; k++) {
         for(uint j = rBWP; j < rY + rBWP; j++) {
@@ -228,9 +234,12 @@ public:
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
             gradientPressure(pressDiff,pressureGradient,cell,rX,rY,rZ);
-            for (uint d = 0; d < rDim; d++) {
-              phi[cell*rDim+d] += pressureGradient[cell*rDim+d] * rPdt;
-            }
+            if(!(pFlags[cell] & FIXED_VELOCITY_X))
+              phi[cell*rDim+0] -= pressureGradient[cell*rDim+0] * rPdt;
+            if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+              phi[cell*rDim+1] -= pressureGradient[cell*rDim+1] * rPdt;
+            if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+              phi[cell*rDim+2] -= pressureGradient[cell*rDim+2] * rPdt;
             cell++;
           }
         }
@@ -240,7 +249,8 @@ public:
         for(uint j = rBWP; j < rY + rBWP; j++) {
           uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(uint i = rBWP; i < rX + rBWP; i++) {
-            pressure[cell] -= pressDiff[cell];
+            if(!(pFlags[cell] & FIXED_PRESSURE))
+              pressure[cell] += pressDiff[cell];
             cell++;
           }
         }

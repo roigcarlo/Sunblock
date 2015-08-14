@@ -74,13 +74,13 @@ int main(int argc, char *argv[]) {
   PrecisionType pdt      = 0.1f;
 
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93e-5f;
+  PrecisionType mu       = 1.0f;//1.93e-5f;
   PrecisionType ka       = 1.0e-5f;
-  PrecisionType cc2      = 343.2f*343.2f;
+  PrecisionType cc2      = 10.0f*10.0f;//343.2f*343.2f;
 
   FileIO io("grid",N);
 
-  Block      * block = NULL;
+  Block         * block = NULL;
 
   PrecisionType * step0 = NULL;
   PrecisionType * step1 = NULL;
@@ -91,6 +91,8 @@ int main(int argc, char *argv[]) {
   PrecisionType * pres1 = NULL;
 
   PrecisionType * velf0 = NULL;
+
+  uint          * flags = NULL; 
 
   MemManager memmrg(false);
 
@@ -107,6 +109,42 @@ int main(int argc, char *argv[]) {
   // Velocity
   memmrg.AllocateGrid(&velf0, N, N, N, 3, 1);
 
+  // Flags
+  memmrg.AllocateGrid(&flags, N, N, N, 1, 1);
+
+  for(uint i = 0; i < N+BW; i++)
+    for(uint j = 0; j < N+BW; j++)
+      for(uint k = 0; k < N+BW; k++)
+        flags[k*(N+BW)*(N+BW)+j*(N+BW)+i] = 0;
+
+  for(uint a = BWP; a < N+BWP; a++)
+    for(uint b = BWP; b < N+BWP; b++) {
+      flags[a*(N+BW)*(N+BW)+b*(N+BW)+1] |= FIXED_VELOCITY_X;
+      flags[a*(N+BW)*(N+BW)+b*(N+BW)+1] |= FIXED_VELOCITY_Y;
+      flags[a*(N+BW)*(N+BW)+b*(N+BW)+1] |= FIXED_VELOCITY_Z;
+
+      flags[a*(N+BW)*(N+BW)+b*(N+BW)+N] |= FIXED_VELOCITY_X;
+      flags[a*(N+BW)*(N+BW)+b*(N+BW)+N] |= FIXED_VELOCITY_Y;
+      flags[a*(N+BW)*(N+BW)+b*(N+BW)+N] |= FIXED_VELOCITY_Z;
+
+      flags[a*(N+BW)*(N+BW)+1*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[a*(N+BW)*(N+BW)+1*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[a*(N+BW)*(N+BW)+1*(N+BW)+b] |= FIXED_VELOCITY_Z;
+
+      flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Z;
+
+      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+    }
+
+
   printf("Allocation correct\n");
   printf("Initialize\n");
 
@@ -118,6 +156,7 @@ int main(int argc, char *argv[]) {
     (PrecisionType*) pres0,
     (PrecisionType*) pres1,
     (PrecisionType*) velf0,
+    (uint*) flags, 
     dx,
     omega,
     ro,
