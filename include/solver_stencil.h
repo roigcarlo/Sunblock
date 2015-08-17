@@ -11,16 +11,17 @@ private:
       const uint &cell,
       const uint &X,
       const uint &Y,
-      const uint &Z) {
+      const uint &Z,
+      const uint &Dim ) {
 
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = gridA[cell*rDim+d] - (
-        gridA[(cell - 1)*rDim+d]   +                  // Left
-        gridA[(cell + 1)*rDim+d]   +                  // Right
-        gridA[(cell - (X+BW))*rDim+d]   +             // Up
-        gridA[(cell + (X+BW))*rDim+d]   +             // Down
-        gridA[(cell - (Y+BW)*(X+BW))*rDim+d] +        // Front
-        gridA[(cell + (Y+BW)*(X+BW))*rDim+d]) *
+    for (uint d = 0; d < Dim; d++) {
+      gridB[cell*Dim+d] = (
+        gridA[(cell - 1)*Dim+d]   +                  // Left
+        gridA[(cell + 1)*Dim+d]   +                  // Right
+        gridA[(cell - (X+BW))*Dim+d]   +             // Up
+        gridA[(cell + (X+BW))*Dim+d]   +             // Down
+        gridA[(cell - (Y+BW)*(X+BW))*Dim+d] +        // Front
+        gridA[(cell + (Y+BW)*(X+BW))*Dim+d]) *
         1.0f/6.0f;
     }
   }
@@ -98,47 +99,6 @@ private:
     gridB[cell] += (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5f * rIdx;
   }
 
-  inline void divergenceVelocityP(
-      PrecisionType * gridA,
-      PrecisionType * gridB,
-      const uint &cell,
-      const uint &X,
-      const uint &Y,
-      const uint &Z) {
-
-    gridB[cell] = 0;
-
-    PrecisionType a = (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]);
-    PrecisionType b = (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]);
-    PrecisionType c = (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]);
-
-    printf("\t:%.17f --- %.17f --- %.17f\n",gridA[(cell+1) *rDim+0],gridA[(cell-1)*rDim+0],a);
-    printf("\t:%.17f --- %.17f --- %.17f\n",gridA[(cell+(X+BW))*rDim+1],gridA[(cell-(X+BW))*rDim+1],b);
-    printf("\t:%.17f --- %.17f --- %.17f\n",gridA[(cell+(Y+BW)*(X+BW))*rDim+2],gridA[(cell-(Y+BW)*(X+BW))*rDim+2],c);
-
-    gridB[cell] = (a + b + c) * 0.5f * rIdx;
-  }
-
-  inline void fixedGradient(
-      PrecisionType * gridA,
-      PrecisionType * gridB,
-      const uint &cell,
-      const uint &X,
-      const uint &Y,
-      const uint &Z) {
-
-    PrecisionType pressGrad[3];
-
-    pressGrad[0] = 0.0f;// 1.0f/64.0f;
-    pressGrad[1] = 0.0f;
-    pressGrad[2] = 0.0f;
-
-    for (uint d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = pressGrad[d];
-    }
-
-  }
-
 public:
 
   StencilSolver(Block * block, const PrecisionType& Dt, const PrecisionType& Pdt) :
@@ -190,7 +150,7 @@ public:
       for(uint j = rBWP; j < rY + rBWP; j++) {
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
-          stencilCross(phi,phiLapplacian,cell++,rX,rY,rZ);
+          stencilCross(phi,phiLapplacian,cell++,rX,rY,rZ,3);
         }
       }
     }
@@ -226,12 +186,6 @@ public:
           for(uint i = rBWP; i < rX + rBWP; i++) {
             divergenceVelocity(phi,phiDivergence,cell,rX,rY,rZ);
             pressDiff[cell] = phiDivergence[cell] * -rRo*rCC2*rPdt;
-            for(uint d = 0; d < 3; d++) {
-              pPhiC[cell*rDim+d] = pressDiff[cell];
-            }
-            for(uint d = 0; d < 3; d++) {
-              pPhiC[cell*rDim+d] = phi[cell*rDim+d];
-            }
             cell++;
           }
         }
@@ -259,6 +213,25 @@ public:
           for(uint i = rBWP; i < rX + rBWP; i++) {
             if(!(pFlags[cell] & FIXED_PRESSURE))
               pressure[cell] += pressDiff[cell];
+            cell++;
+          }
+        }
+      }
+
+      for(uint k = rBWP; k < rZ + rBWP; k++) {
+        for(uint j = rBWP; j < rY + rBWP; j++) {
+          uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+          for(uint i = rBWP; i < rX + rBWP; i++) {
+            stencilCross(pPressA,pPressB,cell++,rX,rY,rZ,1);
+          }
+        }
+      }
+
+      for(uint k = rBWP; k < rZ + rBWP; k++) {
+        for(uint j = rBWP; j < rY + rBWP; j++) {
+          uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+          for(uint i = rBWP; i < rX + rBWP; i++) {
+            pPressA[cell] = pPressB[cell];
             cell++;
           }
         }

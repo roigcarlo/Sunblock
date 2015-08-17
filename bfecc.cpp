@@ -92,7 +92,7 @@ int main(int argc, char *argv[]) {
 
   PrecisionType * velf0 = NULL;
 
-  uint          * flags = NULL; 
+  uint          * flags = NULL;
 
   MemManager memmrg(false);
 
@@ -156,7 +156,7 @@ int main(int argc, char *argv[]) {
     (PrecisionType*) pres0,
     (PrecisionType*) pres1,
     (PrecisionType*) velf0,
-    (uint*) flags, 
+    (uint*) flags,
     dx,
     omega,
     ro,
