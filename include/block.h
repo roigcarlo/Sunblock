@@ -79,9 +79,9 @@ public:
       for(uint j = rBWP; j < rY - rBWP; j++) {
         for(uint i = rBWP; i < rX - rBWP; i++ ) {
           for(uint d = 0; d < rDim; d++) {
-            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0;
-            pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0;
-            pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0;
+            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
+            pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
+            pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
           }
         }
       }
@@ -93,8 +93,8 @@ public:
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {
         for(uint i = 0; i < rX + rBW; i++) {
-          pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = -9.8f * (1.0f/(rZ-1)) * (PrecisionType)(k-1.0f);
-          pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = -9.8f * (1.0f/(rZ-1)) * (PrecisionType)(k-1.0f);
+          pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = (-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
+          pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = (-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
         }
       }
     }
@@ -181,9 +181,9 @@ public:
   void WriteHeatFocus() {
       uint Xc, Yc, Zc;
 
-    Xc = (uint)(2.0 / 5.0 * (rX));
-  	Yc = (uint)(2.0 / 5.5 * (rY));
-  	Zc = (uint)(1.0 / 2.0 * (rZ));
+    Xc = (uint)(2.0f / 5.0f * (PrecisionType)(rX));
+  	Yc = (uint)(2.0f / 5.5f * (PrecisionType)(rY));
+  	Zc = (uint)(1.0f / 2.0f * (PrecisionType)(rZ));
 
     for(uint k = 0; k < rZ + rBW; k++) {
       for(uint j = 0; j < rY + rBW; j++) {

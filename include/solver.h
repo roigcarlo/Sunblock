@@ -46,6 +46,38 @@ public:
   ~Solver() {
   }
 
+  void applyBc(
+      PrecisionType * buff,
+      uint * nodeList,
+      uint nodeListSize,
+      PrecisionType * normal,
+      uint bcType,
+      uint dim
+    ) {
+
+    // Difference
+    if(bcType == 0) {
+      for(uint n = 0; n < nodeListSize; n++) {
+        uint cell = nodeList[n];
+        uint prev = cell - (rZ * rY) * normal[2] - (rZ) * normal[1] - normal[0];
+        uint next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
+
+        buff[next] = 2 * buff[cell] - buff[prev];
+      }
+    }
+
+    // Copy
+    if(bcType == 1) {
+      for(uint n = 0; n < nodeListSize; n++) {
+        uint cell = nodeList[n];
+        uint next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
+        
+        buff[next] = buff[cell];
+      }
+    }
+
+  }
+
   void copyAll(
       PrecisionType * buff,
       uint dim

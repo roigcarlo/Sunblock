@@ -201,14 +201,16 @@ public:
         uint cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(uint i = rBWP; i < rX + rBWP; i++) {
           if(!(pFlags[cell] & FIXED_VELOCITY_X))
-            phi[cell*rDim+0] += (-rMu * phiLapplacian[cell*rDim+0] + pressureGradient[cell*rDim+0] + rRo * force[rDim+0]) * rDt;
+            phi[cell*rDim+0] += (-rMu * phiLapplacian[cell*rDim+0] + pressureGradient[cell*rDim+0] - rRo * force[0]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-            phi[cell*rDim+1] += (-rMu * phiLapplacian[cell*rDim+1] + pressureGradient[cell*rDim+1] + rRo * force[rDim+1]) * rDt;
+            phi[cell*rDim+1] += (-rMu * phiLapplacian[cell*rDim+1] + pressureGradient[cell*rDim+1] - rRo * force[1]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-            phi[cell*rDim+2] += (-rMu * phiLapplacian[cell*rDim+2] + pressureGradient[cell*rDim+2] + rRo * force[rDim+2]) * rDt;
+            phi[cell*rDim+2] += (-rMu * phiLapplacian[cell*rDim+2] + pressureGradient[cell*rDim+2] - rRo * force[2]) * rDt;
+
           for(uint d = 0; d < 3; d++) {
-            pPhiC[cell*rDim+d] = phiLapplacian[cell*rDim+d];
+            pPhiC[cell*rDim+d] = pressureGradient[cell*rDim+d] - rRo * force[d];
           }
+
           cell++;
         }
       }
@@ -224,6 +226,12 @@ public:
           for(uint i = rBWP; i < rX + rBWP; i++) {
             divergenceVelocity(phi,phiDivergence,cell,rX,rY,rZ);
             pressDiff[cell] = phiDivergence[cell] * -rRo*rCC2*rPdt;
+            for(uint d = 0; d < 3; d++) {
+              pPhiC[cell*rDim+d] = pressDiff[cell];
+            }
+            for(uint d = 0; d < 3; d++) {
+              pPhiC[cell*rDim+d] = phi[cell*rDim+d];
+            }
             cell++;
           }
         }
