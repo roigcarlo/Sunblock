@@ -24,27 +24,27 @@ public:
   void Execute() {
 
     #pragma omp parallel for
-    for(uint k = rBWP; k < rZ + rBWP; k++) {
-      for(uint j = rBWP; j < rY + rBWP; j++) {
-        for(uint i = rBWP; i < rX + rBWP; i++) {
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
           Apply(pPhiB,pPhiA,pPhiA,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
 
     #pragma omp parallel for
-    for(uint k = rBWP; k < rZ + rBWP; k++) {
-      for(uint j = rBWP; j < rY + rBWP; j++) {
-        for(uint i = rBWP; i < rX + rBWP; i++) {
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
           Apply(pPhiC,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
         }
       }
     }
 
     #pragma omp parallel for
-    for(uint k = rBWP; k < rZ + rBWP; k++) {
-      for(uint j = rBWP; j < rY + rBWP; j++) {
-        for(uint i = rBWP; i < rX + rBWP; i++) {
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
           Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
@@ -61,12 +61,12 @@ public:
     #define TOP(_i_) rBWP + std::min(rNE*rNB-rBWP,((_i_+1) * rNE))
 
     #pragma omp parallel for
-    for(uint kk = 0; kk < rNB; kk++) {
-      for(uint jj = 0; jj < rNB; jj++) {
-        for(uint ii = 0; ii < rNB; ii++) {
-          for(uint k = BOT(kk); k < TOP(kk); k++) {
-            for(uint j = BOT(jj); j < TOP(jj); j++) {
-              for(uint i = BOT(ii); i < TOP(ii); i++) {
+    for(size_t kk = 0; kk < rNB; kk++) {
+      for(size_t jj = 0; jj < rNB; jj++) {
+        for(size_t ii = 0; ii < rNB; ii++) {
+          for(size_t k = BOT(kk); k < TOP(kk); k++) {
+            for(size_t j = BOT(jj); j < TOP(jj); j++) {
+              for(size_t i = BOT(ii); i < TOP(ii); i++) {
                 Apply(pPhiB,pPhiA,pPhiA,-1.0f,0.0f,1.0f,i,j,k);
               }
             }
@@ -76,12 +76,12 @@ public:
     }
 
     #pragma omp parallel for
-    for(uint kk = 0; kk < rNB; kk++) {
-      for(uint jj = 0; jj < rNB; jj++) {
-        for(uint ii = 0; ii < rNB; ii++) {
-          for(uint k = BOT(kk); k < TOP(kk); k++) {
-            for(uint j = BOT(jj); j < TOP(jj); j++) {
-              for(uint i = BOT(ii); i < TOP(ii); i++) {
+    for(size_t kk = 0; kk < rNB; kk++) {
+      for(size_t jj = 0; jj < rNB; jj++) {
+        for(size_t ii = 0; ii < rNB; ii++) {
+          for(size_t k = BOT(kk); k < TOP(kk); k++) {
+            for(size_t j = BOT(jj); j < TOP(jj); j++) {
+              for(size_t i = BOT(ii); i < TOP(ii); i++) {
                 Apply(pPhiC,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
               }
             }
@@ -91,12 +91,12 @@ public:
     }
 
     #pragma omp parallel for
-    for(uint kk = 0; kk < rNB; kk++) {
-      for(uint jj = 0; jj < rNB; jj++) {
-        for(uint ii = 0; ii < rNB; ii++) {
-          for(uint k = BOT(kk); k < TOP(kk); k++) {
-            for(uint j = BOT(jj); j < TOP(jj); j++) {
-              for(uint i = BOT(ii); i < TOP(ii); i++) {
+    for(size_t kk = 0; kk < rNB; kk++) {
+      for(size_t jj = 0; jj < rNB; jj++) {
+        for(size_t ii = 0; ii < rNB; ii++) {
+          for(size_t k = BOT(kk); k < TOP(kk); k++) {
+            for(size_t j = BOT(jj); j < TOP(jj); j++) {
+              for(size_t i = BOT(ii); i < TOP(ii); i++) {
                 Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
               }
             }
@@ -121,27 +121,32 @@ public:
       PrecisionType * Phi,
       PrecisionType * PhiAuxA,
       PrecisionType * PhiAuxB,
-      const double &Sign,
-      const double &WeightA,
-      const double &WeightB,
-      const uint &i,
-      const uint &j,
-      const uint &k) {
+      const PrecisionType &Sign,
+      const PrecisionType &WeightA,
+      const PrecisionType &WeightB,
+      const size_t &i,
+      const size_t &j,
+      const size_t &k) {
 
-    uint cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
+    size_t cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
 
     PrecisionType iPhi[MAX_DIM];
     PrecisionType origin[MAX_DIM];
     PrecisionType displacement[MAX_DIM];
 
-    origin[0] = i * rDx;
-    origin[1] = j * rDx;
-    origin[2] = k * rDx;
+    origin[0] = (PrecisionType)i * rDx;
+    origin[1] = (PrecisionType)j * rDx;
+    origin[2] = (PrecisionType)k * rDx;
 
-    for(uint d = 0; d < 3; d++) {
+    for(size_t d = 0; d < 3; d++) {
       displacement[d] = origin[d] + Sign * pVelocity[cell*rDim+d] * rDt;
       if(displacement[d] < 0.0f)
-        printf("Error: Displacement for component %d: %f ( %f with velocity: %f) is lt 0\n",d,displacement[d],origin[d],pVelocity[cell*rDim+d]*rDt);
+        printf(
+          "Error: Displacement for component %d: %f ( %f with velocity: %f) is lt 0\n",
+          (int)d,
+          displacement[d],
+          origin[d],
+          pVelocity[cell*rDim+d]*rDt);
     }
 
     InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);

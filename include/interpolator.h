@@ -17,7 +17,7 @@ public:
     PrecisionType * OldPhi,
     PrecisionType * NewPhi,
     PrecisionType * Coords,
-    const uint &Dim) {}
+    const size_t &Dim) {}
 };
 
 
@@ -32,7 +32,7 @@ public:
       PrecisionType * OldPhi,
       PrecisionType * NewPhi,
       PrecisionType * Coords,
-      const uint &Dim ) {
+      const size_t &Dim) {
 
     uint pi,pj,pk,ni,nj,nk;
 
@@ -48,7 +48,7 @@ public:
     Ny = 1-(Coords[1] - pj);
     Nz = 1-(Coords[2] - pk);
 
-    for(uint d = 0; d < Dim; d++) {
+    for(size_t d = 0; d < Dim; d++) {
       *(NewPhi+d) = (
         OldPhi[IndexType::GetIndex(pi,pj,pk,block->mPaddY,block->mPaddZ)*Dim+d] * (    Nx) * (    Ny) * (    Nz) +
         OldPhi[IndexType::GetIndex(ni,pj,pk,block->mPaddY,block->mPaddZ)*Dim+d] * (1 - Nx) * (    Ny) * (    Nz) +

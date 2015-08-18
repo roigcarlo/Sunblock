@@ -17,12 +17,18 @@ public:
   ~MemManager(){}
 
   template <typename T>
-  void AllocateGrid(T ** grid, const uint &X, const uint &Y, const uint &Z, const uint &len, const uint align) {
+  void AllocateGrid(
+      T ** grid,
+      const size_t &X,
+      const size_t &Y,
+      const size_t &Z,
+      const size_t &len,
+      const size_t align) {
 
-    uint elements     = (X+BW) * (Y+BW) * (Z+BW);
-    uint element_size = sizeof(T) * len;
+    size_t elements     = (X+BW) * (Y+BW) * (Z+BW);
+    size_t element_size = sizeof(T) * len;
 
-    uint size         = elements * element_size;
+    size_t size         = elements * element_size;
 
     if(use_cuda_pinned_mem) {
 #ifdef USE_CUDA
@@ -49,7 +55,7 @@ public:
   }
 
   template <typename T>
-  void ReleaseGrid(T * grid, const uint align) {
+  void ReleaseGrid(T * grid, const size_t align) {
 
     if(use_cuda_pinned_mem) {
 #ifdef USE_CUDA
@@ -85,13 +91,15 @@ public:
   };
 
   inline void getExponent(double &value, int exponent) {
+
     dui a;
     a.d = value;
 
     exponent = ((a.i[1] & 0x7FF) >> 20 ) - 1023;
   }
 
-  inline void getExponent(float &value, uint exponent) {
+  inline void getExponent(float &value, int exponent) {
+
     fui a;
     a.f = value;
 
@@ -103,7 +111,8 @@ public:
   // 01 Bits -> Sign
   // 11 Bits -> Exp
   // 52 Bits -> Fraction
-  inline void FlipDouble(double &value, uint index) {
+  inline void FlipDouble(double &value, size_t index) {
+
     if(index > 63) return;
 
     int lohi = index > 31;
@@ -122,7 +131,8 @@ public:
     a.i[1] = a.i[1] ^ (0x1<<31);
   }
 
-  inline void FlipDoubleExponent(double &value, uint index) {
+  inline void FlipDoubleExponent(double &value, size_t index) {
+
     if(index > 11) return;
 
     dui a;
@@ -131,7 +141,8 @@ public:
     a.i[1] = a.i[1] ^ (0x1<<(index+20));
   }
 
-  inline void FlipDoubleFraction(double &value, uint index) {
+  inline void FlipDoubleFraction(double &value, size_t index) {
+
     if(index > 51) return;
 
     int lohi = index > 31;
@@ -147,7 +158,8 @@ public:
   // 01 Bits -> Sign
   // 08 Bits -> Exp
   // 23 Bits -> Fraction
-  inline void FlipFloat(float &value, uint index) {
+  inline void FlipFloat(float &value, size_t index) {
+
     if(index > 31) return;
 
     fui a;
@@ -157,13 +169,15 @@ public:
   }
 
   inline void FlipFloatSign(float &value) {
+
     fui a;
     a.f = value;
 
     a.i = a.i ^ (0x1<<31);
   }
 
-  inline void FlipFloatExponent(float &value, uint index) {
+  inline void FlipFloatExponent(float &value, size_t index) {
+
     if(index > 7) return;
 
     fui a;
@@ -172,7 +186,8 @@ public:
     a.i = a.i ^ (0x1<<(index + 23));
   }
 
-  inline void FlipFloatFraction(float &value, uint index) {
+  inline void FlipFloatFraction(float &value, size_t index) {
+
     if(index > 22) return;
 
     fui a;
@@ -192,15 +207,23 @@ public:
    * Calculates the standard index
    * @BW: BorderWidth
    **/
-  static uint GetIndex(const uint &i, const uint &j, const uint &k, const uint &sY, const uint &sZ) {
-    return k*sZ+j*sY+i;
+  static size_t GetIndex(
+      const size_t &i,
+      const size_t &j,
+      const size_t &k,
+      const size_t &sizeY,
+      const size_t &sizeZ) {
+
+    return k*sizeZ+j*sizeY+i;
   }
 
-  static void PreCalculateIndexTable(const uint &N) {
+  static void PreCalculateIndexTable(
+      const size_t &N
+    ) {
     // Nedded by some indexers to calculate faster
   }
 
-  static void ReleaseIndexTable(const uint &N) {
+  static void ReleaseIndexTable(const size_t &N) {
     // Nedded by some indexers to calculate faster
   }
 };
@@ -208,49 +231,45 @@ public:
 class MortonIndexer : Indexer {
 public:
 
-  static uint * pIndexTable;
+  static size_t * pIndexTable;
 
   /**
    * Calculates the morton index
    * @BW: BorderWidth
    **/
   template<typename BlockType>
-  static uint GetIndex(const uint &i, const uint &j, const uint &k, const uint &sY, const uint &sZ) {
+  static uint GetIndex(
+      const size_t &i,
+      const size_t &j,
+      const size_t &k,
+      const size_t &sizeY,
+      const size_t &sizeZ) {
+
     //return interleave64(i,j,k);
-    return pIndexTable[k*sZ+j*sY+i];
+    return pIndexTable[k*sizeZ+j*sizeY+i];
   }
 
-  static void PreCalculateIndexTable(const uint &N) {
-    if(pIndexTable == NULL) {
-      pIndexTable = (uint *)malloc(sizeof(uint) * N * N * N);
+  static void PreCalculateIndexTable(const size_t &N) {
 
-      for(uint k = 0; k < N; k++)
-        for(uint j = 0; j < N; j++)
-          for(uint i = 0; i < N; i++)
+    if(pIndexTable == NULL) {
+      pIndexTable = (size_t *)malloc(sizeof(size_t) * N * N * N);
+
+      for(size_t k = 0; k < N; k++)
+        for(size_t j = 0; j < N; j++)
+          for(size_t i = 0; i < N; i++)
             pIndexTable[k*N*N+j*N+i] = interleave64(i,j,k);
     }
   }
 
-  static void ReleaseIndexTable(const uint &N) {
+  static void ReleaseIndexTable(const size_t &N) {
+
     if(pIndexTable == NULL) {
       free(pIndexTable);
     }
   }
 };
 
-uint * MortonIndexer::pIndexTable;
-
-class PeanoIndexer : Indexer {
-public:
-  /**
-   * Calculates the Peano index
-   * @BW: BorderWidth
-   **/
-  static uint GetIndex(const uint &i, const uint &j, const uint &k, const uint &sY, const uint &sZ) {
-    // To be implemented
-    return 0;
-  }
-};
+size_t * MortonIndexer::pIndexTable;
 
 class Utils {
 private:
@@ -259,13 +278,22 @@ private:
 
 public:
 
-  static void GlobalToLocal(PrecisionType * coord, PrecisionType f, const uint &dim) {
-    for(uint d = 0; d < dim; d++)
+  static void GlobalToLocal(
+      PrecisionType * coord,
+      PrecisionType f,
+      const size_t &dim) {
+
+    for(size_t d = 0; d < dim; d++)
       coord[d] *= f;
   }
 
-  static void LocalToGlobal(PrecisionType * coord, PrecisionType f, const uint &dim) {
-    for(uint d = 0; d < dim; d++)
+  static void LocalToGlobal(
+      PrecisionType * coord,
+      PrecisionType f,
+      const size_t &dim
+    ) {
+
+    for(size_t d = 0; d < dim; d++)
       coord[d] /= f;
   }
 };

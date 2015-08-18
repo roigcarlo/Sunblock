@@ -40,7 +40,7 @@ public:
       rZ(block->rZ),
       rNB(block->rNB),
       rNE(block->rNE),
-      rDim(block->rDim){
+      rDim(block->rDim) {
   }
 
   ~Solver() {
@@ -48,19 +48,19 @@ public:
 
   void applyBc(
       PrecisionType * buff,
-      uint * nodeList,
-      uint nodeListSize,
-      PrecisionType * normal,
-      uint bcType,
-      uint dim
+      size_t * nodeList,
+      size_t nodeListSize,
+      size_t * normal,
+      int bcType,
+      size_t dim
     ) {
 
     // Difference
     if(bcType == 0) {
-      for(uint n = 0; n < nodeListSize; n++) {
-        uint cell = nodeList[n];
-        uint prev = cell - (rZ * rY) * normal[2] - (rZ) * normal[1] - normal[0];
-        uint next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
+      for(size_t n = 0; n < nodeListSize; n++) {
+        size_t cell = nodeList[n];
+        size_t prev = cell - (rZ * rY) * normal[2] - (rZ) * normal[1] - normal[0];
+        size_t next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
 
         buff[next] = 2 * buff[cell] - buff[prev];
       }
@@ -68,26 +68,23 @@ public:
 
     // Copy
     if(bcType == 1) {
-      for(uint n = 0; n < nodeListSize; n++) {
-        uint cell = nodeList[n];
-        uint next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
-        
+      for(size_t n = 0; n < nodeListSize; n++) {
+        size_t cell = nodeList[n];
+        size_t next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
+
         buff[next] = buff[cell];
       }
     }
 
   }
 
-  void copyAll(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyAll(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint a = 0; a < rY + rBW; a++) {
-      for(uint b = 0; b < rX + rBW; b++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t a = 0; a < rY + rBW; a++) {
+      for(size_t b = 0; b < rX + rBW; b++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(0,a,b)*dim+d] = buff[INDEX(1,a,b)*dim+d];
           buff[INDEX(a,0,b)*dim+d] = buff[INDEX(a,1,b)*dim+d];
           buff[INDEX(a,b,0)*dim+d] = buff[INDEX(a,b,1)*dim+d];
@@ -103,16 +100,13 @@ public:
 
   }
 
-  void copyLeft(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyLeft(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(0,j,k)*dim+d] = buff[INDEX(1,j,k)*dim+d];
         }
       }
@@ -122,16 +116,13 @@ public:
 
   }
 
-  void copyRight(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyRight(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(rX + rBW - 1,j,k)*dim+d] = buff[INDEX(rX + rBW - 2,j,k)*dim+d];
         }
       }
@@ -141,16 +132,13 @@ public:
 
   }
 
-  void copyDown(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyDown(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint i = 0; i < rX + rBW; i++) {
-      for(uint k = 0; k < rZ + rBW; k++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t i = 0; i < rX + rBW; i++) {
+      for(size_t k = 0; k < rZ + rBW; k++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(i,0,k)*dim+d] = buff[INDEX(i,1,k)*dim+d];
         }
       }
@@ -160,16 +148,13 @@ public:
 
   }
 
-  void copyUp(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyUp(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint i = 0; i < rX + rBW; i++) {
-      for(uint k = 0; k < rZ + rBW; k++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t i = 0; i < rX + rBW; i++) {
+      for(size_t k = 0; k < rZ + rBW; k++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(i,rY + rBW - 1,k)*dim+d] = buff[INDEX(i,rY + rBW - 2,k)*dim+d];
         }
       }
@@ -179,16 +164,13 @@ public:
 
   }
 
-  void copyBack(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyBack(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint i = 0; i < rX + rBW; i++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t i = 0; i < rX + rBW; i++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(i,j,0)*dim+d] = buff[INDEX(i,j,1)*dim+d];
         }
       }
@@ -198,16 +180,13 @@ public:
 
   }
 
-  void copyFront(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyFront(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint i = 0; i < rX + rBW; i++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t i = 0; i < rX + rBW; i++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(i,j,rZ + rBW - 1)*dim+d] = buff[INDEX(i,j,rZ + rBW - 2)*dim+d];
         }
       }
@@ -217,16 +196,13 @@ public:
 
   }
 
-  void copyLeftToRight(
-      PrecisionType * buff,
-      uint dim
-    ) {
+  void copyLeftToRight(PrecisionType * buff, size_t dim) {
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint d = 0; d < dim; d++) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t d = 0; d < dim; d++) {
           buff[INDEX(0,j,k)*dim+d] = buff[INDEX(rX + rBW - 2,j,k)*dim+d];
         }
       }
@@ -272,17 +248,17 @@ protected:
 
   const PrecisionType & rCC2;
 
-  const uint & rBW;
-  const uint rBWP;
+  const size_t &rBW;
+  const size_t  rBWP;
 
-  const uint & rX;
-  const uint & rY;
-  const uint & rZ;
+  const size_t &rX;
+  const size_t &rY;
+  const size_t &rZ;
 
-  const uint & rNB;
-  const uint & rNE;
+  const size_t &rNB;
+  const size_t &rNE;
 
-  const uint & rDim;
+  const size_t &rDim;
 };
 
 #endif

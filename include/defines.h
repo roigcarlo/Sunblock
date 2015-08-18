@@ -10,31 +10,31 @@
 #include <math.h>
 
 #ifdef _WIN32
-typedef unsigned int uint;
+typedef __uint64_t uint;
 #endif
 
 #define FETCHTIME(STR,END) \
-((END.tv_sec  - STR.tv_sec) * 1000000u + END.tv_usec - STR.tv_usec) / 1.e6;
+(double)((END.tv_sec  - STR.tv_sec) * 1000000u + END.tv_usec - STR.tv_usec) / 1.e6;
 
 #ifndef USE_DOUBLE
   #ifndef USE_FLOAT
     typedef double  PrecisionType;
-    const uint BW          = 2;        //  Boundary width
+    const size_t BW        = 2;        //  Boundary width
   #endif
 #endif
 
 #ifdef USE_DOUBLE
   typedef double  PrecisionType;
-  const uint BW            = 8;        //  Boundary width
+  const size_t BW          = 8;        //  Boundary width
 #endif
 
 #ifdef USE_FLOAT
   typedef float  PrecisionType;
-  const uint BW            = 16;       //  Boundary width
+  const size_t BW          = 16;       //  Boundary width
 #endif
 
-const uint MAX_DIM         = 3;
-const uint BWP             = BW / 2;   //  Boundary padding
+const size_t MAX_DIM       = 3;
+const size_t BWP           = BW / 2;   //  Boundary padding
 const PrecisionType ONESIX = 1.0/6.0;
 
 #define DIMENSION(A) sizeof(A)/sizeof(PrecisionType)

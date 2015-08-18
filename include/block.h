@@ -24,9 +24,9 @@ public:
       const PrecisionType &Mu,
       const PrecisionType &Ka,
       const PrecisionType &CC2,
-      const uint &BW,
-      const uint &X, const uint &Y, const uint &Z,
-      const uint &NB, const uint &NE, const uint &DIM) :
+      const size_t &BW,
+      const size_t &X, const size_t &Y, const size_t &Z,
+      const size_t &NB, const size_t &NE, const size_t &DIM) :
     pPhiA(PhiA),
     pPhiB(PhiB),
     pPhiC(PhiC),
@@ -75,10 +75,10 @@ public:
   ~Block() {}
 
   void Zero() {
-    for(uint k = rBWP; k < rZ - rBWP; k++) {
-      for(uint j = rBWP; j < rY - rBWP; j++) {
-        for(uint i = rBWP; i < rX - rBWP; i++ ) {
-          for(uint d = 0; d < rDim; d++) {
+    for(size_t k = rBWP; k < rZ - rBWP; k++) {
+      for(size_t j = rBWP; j < rY - rBWP; j++) {
+        for(size_t i = rBWP; i < rX - rBWP; i++ ) {
+          for(size_t d = 0; d < rDim; d++) {
             pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
             pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
             pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
@@ -90,9 +90,9 @@ public:
 
   void InitializePressure() {
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint i = 0; i < rX + rBW; i++) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t i = 0; i < rX + rBW; i++) {
           pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = (-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
           pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = (-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
         }
@@ -103,19 +103,19 @@ public:
 
   void InitializeVelocity() {
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint i = 0; i < rX + rBW; i++) {
-          for(uint d = 0; d < rDim; d++) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t i = 0; i < rX + rBW; i++) {
+          for(size_t d = 0; d < rDim; d++) {
             pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
           }
         }
       }
     }
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint i = 0; i < rX + rBW; i++ ) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t i = 0; i < rX + rBW; i++ ) {
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
           pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
@@ -135,8 +135,8 @@ public:
       }
     }
 
-    for(uint jk = 0; jk < rY + rBW; jk++) {
-      for(uint i = 0; i < rX + rBW; i++ ) {
+    for(size_t jk = 0; jk < rY + rBW; jk++) {
+      for(size_t i = 0; i < rX + rBW; i++ ) {
         pVelocity[IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
         pVelocity[IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
         pPhiA[IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
@@ -148,8 +148,8 @@ public:
       }
     }
 
-    for(uint jk = 0; jk < rY + rBW; jk++) {
-      for(uint i = 0; i < rX + rBW; i++ ) {
+    for(size_t jk = 0; jk < rY + rBW; jk++) {
+      for(size_t i = 0; i < rX + rBW; i++ ) {
         pVelocity[IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
         pVelocity[IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
         pPhiA[IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
@@ -166,9 +166,9 @@ public:
 
     maxv = 1.0f;
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint i = 0; i < rX + rBW; i++ ) {
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t i = 0; i < rX + rBW; i++ ) {
           maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
           maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
           maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
@@ -179,22 +179,28 @@ public:
   }
 
   void WriteHeatFocus() {
-      uint Xc, Yc, Zc;
 
-    Xc = (uint)(2.0f / 5.0f * (PrecisionType)(rX));
-  	Yc = (uint)(2.0f / 5.5f * (PrecisionType)(rY));
-  	Zc = (uint)(1.0f / 2.0f * (PrecisionType)(rZ));
+    size_t Xc, Yc, Zc;
 
-    for(uint k = 0; k < rZ + rBW; k++) {
-      for(uint j = 0; j < rY + rBW; j++) {
-        for(uint i = 0; i < rX + rBW; i++) {
+    Xc = (size_t)(2.0f / 5.0f * (PrecisionType)(rX));
+  	Yc = (size_t)(2.0f / 5.5f * (PrecisionType)(rY));
+  	Zc = (size_t)(1.0f / 2.0f * (PrecisionType)(rZ));
 
-          PrecisionType d2 = pow((Xc - (PrecisionType)(i)),2) + pow((Yc - (PrecisionType)(j)),2) + pow((Zc - (PrecisionType)(k)),2);
-          PrecisionType rr = pow(rX/6.0,2);
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t i = 0; i < rX + rBW; i++) {
+
+          PrecisionType d2 =
+            pow(((PrecisionType)Xc - (PrecisionType)(i)),2.0f) +
+            pow(((PrecisionType)Yc - (PrecisionType)(j)),2.0f) +
+            pow(((PrecisionType)Zc - (PrecisionType)(k)),2.0f);
+
+          PrecisionType rr =
+            pow((PrecisionType)rX/6.0,2.0f);
 
           if(d2 < rr) {
-            for(uint d = 0; d < rDim; d++) {
-              pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 1.0 - d2/rr;
+            for(size_t d = 0; d < rDim; d++) {
+              pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 1.0f - d2/rr;
             }
           }
         }
@@ -231,31 +237,28 @@ public:
   const PrecisionType & rKa;
   const PrecisionType & rCC2;
 
-  const uint & rBW;
-  const uint rBWP;
+  const size_t &rBW;
+  const size_t  rBWP;
 
-  const uint & rX;
-  const uint & rY;
-  const uint & rZ;
+  const size_t &rX;
+  const size_t &rY;
+  const size_t &rZ;
 
-  const uint & rNB;
-  const uint & rNE;
+  const size_t &rNB;
+  const size_t &rNE;
 
-  const uint & rDim;
+  const size_t &rDim;
 
-  uint mPaddZ;
-  uint mPaddY;
+  size_t mPaddZ;
+  size_t mPaddY;
 
-  uint mPaddA;
-  uint mPaddB;
-  uint mPaddC;
-  uint mPaddD;
-  uint mPaddE;
-  uint mPaddF;
-  uint mPaddG;
-
-private:
-
+  size_t mPaddA;
+  size_t mPaddB;
+  size_t mPaddC;
+  size_t mPaddD;
+  size_t mPaddE;
+  size_t mPaddF;
+  size_t mPaddG;
 };
 
 #endif

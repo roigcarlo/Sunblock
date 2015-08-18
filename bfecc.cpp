@@ -42,7 +42,7 @@ PrecisionType calculateMaxDt_Fourier() {
 }
 
 PrecisionType calculatePressDt(PrecisionType dt, PrecisionType limit) {
-  int base = ceil(dt/limit);
+  PrecisionType base = ceil(dt/limit);
   return dt/base;
 }
 
@@ -55,12 +55,12 @@ int main(int argc, char *argv[]) {
 #endif
   PrecisionType duration = 0.0;
 
-  uint N          = atoi(argv[1]);
+  size_t N        = atoi(argv[1]);
   uint steeps     = atoi(argv[2]);
-  uint NB         = atoi(argv[4]);
-  uint NE         = (N+BW)/NB;
+  size_t NB       = atoi(argv[4]);
+  size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
-  uint Dim        = 3;
+  size_t Dim      = 3;
   uint frec       = steeps/steeps;
 
   PrecisionType h        = atoi(argv[3]);
@@ -179,9 +179,14 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  pdt = ro/cc2;
+  pdt = calculatePressDt(dt,ro/cc2);
 
-  printf("Calculated dt: %f -- %f, %f, %f \n",dt,CFL,h/N,maxv);
+  printf(
+    "Calculated dt: %f -- %f, %f, %f \n",
+    dt,
+    CFL,
+    (PrecisionType)h/(PrecisionType)N,
+    maxv);
 
   BfeccSolver   AdvectionSolver(block,dt,pdt);
   StencilSolver DiffusionSolver(block,dt,pdt);
@@ -209,8 +214,17 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    pdt = ro/cc2;
-    printf("Step %d: %f -- %f, %f, MAXV: %f, [%f,%f] \n",i,calculateMaxDt_CFL(CFL,dx,maxv),CFL,h/N,maxv,(1.0f/64.0f)/dt,(maxv-oldmaxv));
+    pdt = calculatePressDt(dt,ro/cc2);
+
+    printf(
+      "Step %d: %f -- %f, %f, MAXV: %f, [%f,%f] \n",
+      i,
+      calculateMaxDt_CFL(CFL, dx, maxv),
+      CFL,
+      (PrecisionType)h/(PrecisionType)N,
+      maxv,
+      (1.0f/64.0f)/dt,
+      (maxv-oldmaxv));
 
     AdvectionSolver.Execute();
     DiffusionSolver.Execute();
