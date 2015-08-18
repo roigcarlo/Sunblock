@@ -22,11 +22,11 @@ public:
       const size_t &X,
       const size_t &Y,
       const size_t &Z,
-      const size_t &len,
+      const size_t &dim,
       const size_t align) {
 
     size_t elements     = (X+BW) * (Y+BW) * (Z+BW);
-    size_t element_size = sizeof(T) * len;
+    size_t element_size = sizeof(T) * dim;
 
     size_t size         = elements * element_size;
 
@@ -34,12 +34,12 @@ public:
 #ifdef USE_CUDA
       cudaMallocHost((void**)grid, size);
 #else
-      printf("Error: CUDA support is not enabled, please compile with -DUSE_CUDA.");
+      printf("Error: CUDA support is not enabled, please compile with -DUSE_CUDA.\n");
       exit(1);
 #endif
     } else {
       if(align < 1) {
-        printf("Error: Trying to align memory to negative values.");
+        printf("Error: Trying to align memory to negative values.\n");
         exit(1);
       } else if( align == 1) {
         *grid = (T *)malloc(size);

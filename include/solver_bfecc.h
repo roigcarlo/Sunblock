@@ -36,7 +36,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiC,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
+          Apply(pPhiD,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
         }
       }
     }
@@ -45,7 +45,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
+          Apply(pPhiA,pPhiA,pPhiD,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
