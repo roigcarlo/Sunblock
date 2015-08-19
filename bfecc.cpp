@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = steeps/steeps;
+  uint frec       = steeps/20;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -74,9 +74,9 @@ int main(int argc, char *argv[]) {
   PrecisionType pdt      = 0.1f;
 
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.0f;//1.93e-5f;
+  PrecisionType mu       = 1.93e-5f;
   PrecisionType ka       = 1.0e-5f;
-  PrecisionType cc2      = 10.0f*10.0f;//343.2f*343.2f;
+  PrecisionType cc2      = 343.2f*343.2f;
 
   FileIO io("grid",N);
 
@@ -117,7 +117,7 @@ int main(int argc, char *argv[]) {
       for(uint k = 0; k < N+BW; k++)
         flags[k*(N+BW)*(N+BW)+j*(N+BW)+i] = 0;
 
-  for(uint a = BWP; a < N+BWP; a++)
+  for(uint a = BWP; a < N+BWP; a++) {
     for(uint b = BWP; b < N+BWP; b++) {
       flags[a*(N+BW)*(N+BW)+b*(N+BW)+1] |= FIXED_VELOCITY_X;
       flags[a*(N+BW)*(N+BW)+b*(N+BW)+1] |= FIXED_VELOCITY_Y;
@@ -143,7 +143,7 @@ int main(int argc, char *argv[]) {
       flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
       flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
     }
-
+  }
 
   printf("Allocation correct\n");
   printf("Initialize\n");
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  pdt = calculatePressDt(dt,ro/cc2);
+  dt = calculatePressDt(dt,ro/cc2);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -214,7 +214,7 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    pdt = calculatePressDt(dt,ro/cc2);
+    dt = calculatePressDt(dt,ro/cc2);
 
     printf(
       "Step %d: %f -- %f, %f, MAXV: %f, [%f,%f] \n",

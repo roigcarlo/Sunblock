@@ -52,15 +52,16 @@ public:
       size_t nodeListSize,
       size_t * normal,
       int bcType,
-      size_t dim
-    ) {
+      size_t dim) {
 
     // Difference
     if(bcType == 0) {
       for(size_t n = 0; n < nodeListSize; n++) {
         size_t cell = nodeList[n];
-        size_t prev = cell - (rZ * rY) * normal[2] - (rZ) * normal[1] - normal[0];
-        size_t next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
+        size_t prev = cell-(rZ+rBW)*(rY+rBW)*normal[2]-(rZ+rBW)*normal[1]-normal[0];
+        size_t next = cell+(rZ+rBW)*(rY+rBW)*normal[2]+(rZ+rBW)*normal[1]+normal[0];
+
+        // printf("%d -- %d -- %d\n",cell,prev,next);
 
         buff[next] = 2 * buff[cell] - buff[prev];
       }

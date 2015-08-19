@@ -53,37 +53,6 @@ private:
     }
   }
 
-  inline void gradientPressureP(
-      PrecisionType * press,
-      PrecisionType * gridB,
-      const size_t &cell,
-      const size_t &X,
-      const size_t &Y,
-      const size_t &Z) {
-
-    PrecisionType pressGrad[3];
-
-    pressGrad[0] = (
-      press[(cell + 1)] -
-      press[(cell - 1)]);
-
-    pressGrad[1] = (
-      press[(cell + (X+BW))] -
-      press[(cell - (X+BW))]);
-
-    pressGrad[2] = (
-      press[(cell + (Y+BW)*(X+BW))] -
-      press[(cell - (Y+BW)*(X+BW))]);
-
-    for (size_t d = 0; d < rDim; d++) {
-      gridB[cell*rDim+d] = pressGrad[d] * 0.5f * rIdx;
-    }
-
-    printf("\t:%.10f --- %.10f --- %.10f\n",press[(cell + 1)],press[(cell - 1)],gridB[cell*rDim+0]);
-    printf("\t:%.10f --- %.10f --- %.10f\n",press[(cell + (X+BW))],press[(cell - (X+BW))],gridB[cell*rDim+1]);
-    printf("\t:%.10f --- %.10f --- %.10f\n",press[(cell + (Y+BW)*(X+BW))],press[(cell - (Y+BW)*(X+BW))],gridB[cell*rDim+2]);
-  }
-
   inline void divergenceVelocity(
       PrecisionType * gridA,
       PrecisionType * gridB,
@@ -126,12 +95,30 @@ public:
     PrecisionType * pressure          = pPressA;
     PrecisionType * pressureGradient  = pPhiB;
     PrecisionType * phiLapplacian     = pPhiD;
+    PrecisionType * pressLapplacian   = pPhiD;
 
     PrecisionType * phiDivergence     = pPressB;
     PrecisionType * pressDiff         = pPressB;
 
-    PrecisionType force[3]            = {0.0f, 0.0f, -9.8f};
+    PrecisionType force[3]            = {0.0f, 0.0f, 0.0f};
 
+    size_t listup[16*16];
+    size_t listdw[16*16];
+
+    size_t normalup[3] = {0,0,-1};
+    size_t normaldw[3] = {0,0,1};
+
+    uint counter = 0;
+    for(uint a = rBWP; a < rZ + rBWP; a++) {
+      for(uint b = rBWP; b < rY + rBWP; b++) {
+        listup[counter] = 1 *(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+        listdw[counter] = rY*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+
+        counter++;
+      }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
 
     // Apply the pressure gradient
     #pragma omp parallel for
@@ -176,68 +163,71 @@ public:
       }
     }
 
-    printf("SUBS: %f ---- %f ---- %f\n",rDt,rPdt,rDt/rPdt);
-
-    for(size_t ss = 0 ; ss < rDt/rPdt; ss++) {
-
-      for(size_t k = rBWP; k < rZ + rBWP; k++) {
-        for(size_t j = rBWP; j < rY + rBWP; j++) {
-          size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-          for(size_t i = rBWP; i < rX + rBWP; i++) {
-            divergenceVelocity(phi,phiDivergence,cell,rX,rY,rZ);
-            pressDiff[cell] = phiDivergence[cell] * -rRo*rCC2*rPdt;
-            cell++;
-          }
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          divergenceVelocity(phi,phiDivergence,cell,rX,rY,rZ);
+          pressDiff[cell] = -rRo*rCC2*rDt * phiDivergence[cell];
+          cell++;
         }
       }
-
-      for(size_t k = rBWP; k < rZ + rBWP; k++) {
-        for(size_t j = rBWP; j < rY + rBWP; j++) {
-          size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-          for(size_t i = rBWP; i < rX + rBWP; i++) {
-            gradientPressure(pressDiff,pressureGradient,cell,rX,rY,rZ);
-            if(!(pFlags[cell] & FIXED_VELOCITY_X))
-              phi[cell*rDim+0] -= pressureGradient[cell*rDim+0] * rPdt;
-            if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-              phi[cell*rDim+1] -= pressureGradient[cell*rDim+1] * rPdt;
-            if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-              phi[cell*rDim+2] -= pressureGradient[cell*rDim+2] * rPdt;
-            cell++;
-          }
-        }
-      }
-
-      for(size_t k = rBWP; k < rZ + rBWP; k++) {
-        for(size_t j = rBWP; j < rY + rBWP; j++) {
-          size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-          for(size_t i = rBWP; i < rX + rBWP; i++) {
-            if(!(pFlags[cell] & FIXED_PRESSURE))
-              pressure[cell] += pressDiff[cell];
-            cell++;
-          }
-        }
-      }
-
-      for(size_t k = rBWP; k < rZ + rBWP; k++) {
-        for(size_t j = rBWP; j < rY + rBWP; j++) {
-          size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-          for(size_t i = rBWP; i < rX + rBWP; i++) {
-            stencilCross(pPressA,pPressB,cell++,rX,rY,rZ,1);
-          }
-        }
-      }
-
-      for(size_t k = rBWP; k < rZ + rBWP; k++) {
-        for(size_t j = rBWP; j < rY + rBWP; j++) {
-          size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-          for(size_t i = rBWP; i < rX + rBWP; i++) {
-            pPressA[cell] = pPressB[cell];
-            cell++;
-          }
-        }
-      }
-
     }
+
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          stencilCross(pressDiff,pressLapplacian,cell++,rX,rY,rZ,1);
+        }
+      }
+    }
+
+    // for(size_t k = rBWP; k < rZ + rBWP; k++) {
+    //   for(size_t j = rBWP; j < rY + rBWP; j++) {
+    //     size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+    //     for(size_t i = rBWP; i < rX + rBWP; i++) {
+    //       gradientPressure(pressDiff,pressureGradient,cell,rX,rY,rZ);
+    //       if(!(pFlags[cell] & FIXED_VELOCITY_X))
+    //         phi[cell*rDim+0] -= pressureGradient[cell*rDim+0] * rPdt;
+    //       if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+    //         phi[cell*rDim+1] -= pressureGradient[cell*rDim+1] * rPdt;
+    //       if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+    //         phi[cell*rDim+2] -= pressureGradient[cell*rDim+2] * rPdt;
+    //       cell++;
+    //     }
+    //   }
+    // }
+
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          if(!(pFlags[cell] & FIXED_PRESSURE))
+            pressure[cell] += pressLapplacian[cell] * rDt / rRo;
+          cell++;
+        }
+      }
+    }
+
+    // for(size_t k = rBWP; k < rZ + rBWP; k++) {
+    //   for(size_t j = rBWP; j < rY + rBWP; j++) {
+    //     size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+    //     for(size_t i = rBWP; i < rX + rBWP; i++) {
+    //       stencilCross(pPressA,pPressB,cell++,rX,rY,rZ,1);
+    //     }
+    //   }
+    // }
+    //
+    // for(size_t k = rBWP; k < rZ + rBWP; k++) {
+    //   for(size_t j = rBWP; j < rY + rBWP; j++) {
+    //     size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+    //     for(size_t i = rBWP; i < rX + rBWP; i++) {
+    //       pPressA[cell] = pPressB[cell];
+    //       cell++;
+    //     }
+    //   }
+    // }
 
   }
 
