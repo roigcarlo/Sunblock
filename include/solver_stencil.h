@@ -5,7 +5,22 @@ class StencilSolver : public Solver {
 private:
 
   // This does not belong here! put it in a class
-  inline void stencilCross(
+  inline void calculateAcceleration(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      PrecisionType * gridC,
+      const size_t &cell,
+      const size_t &X,
+      const size_t &Y,
+      const size_t &Z,
+      const size_t &Dim) {
+
+    for (size_t d = 0; d < Dim; d++) {
+      gridC[cell*Dim+d] = (gridB[cell*Dim+d] - gridA[cell*Dim+d])/rDt;
+    }
+  }
+
+  inline void lapplacian(
       PrecisionType * gridA,
       PrecisionType * gridB,
       const size_t &cell,
@@ -63,9 +78,9 @@ private:
 
     gridB[cell] = 0;
 
-    gridB[cell] += (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5f * rIdx;
-    gridB[cell] += (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5f * rIdx;
-    gridB[cell] += (gridA[(cell + (Y+BW)*(X+BW))*rDim+2] - gridA[(cell - (Y+BW)*(X+BW))*rDim+2]) * 0.5f * rIdx;
+    // gridB[cell] += (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5f * rIdx;
+    // gridB[cell] += (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5f * rIdx;
+    gridB[cell] += (gridA[(cell + (Y+rBW)*(X+rBW))*rDim+2] - gridA[(cell - (Y+rBW)*(X+rBW))*rDim+2]) * 0.5f * rIdx;
   }
 
 public:
@@ -91,16 +106,17 @@ public:
   void Execute() {
 
     // Alias for the buffers
-    PrecisionType * phi               = pPhiA;
-    PrecisionType * pressure          = pPressA;
-    PrecisionType * pressureGradient  = pPhiB;
-    PrecisionType * phiLapplacian     = pPhiD;
-    PrecisionType * pressLapplacian   = pPhiD;
+    PrecisionType * initVel   = pPhiA;
+    PrecisionType * vel       = pPhiB;
+    PrecisionType * acc       = pPhiD;
+    PrecisionType * press     = pPressA;
 
-    PrecisionType * phiDivergence     = pPressB;
-    PrecisionType * pressDiff         = pPressB;
+    PrecisionType * pressGrad = pPhiB;
+    PrecisionType * velLapp   = pPhiC;
 
-    PrecisionType force[3]            = {0.0f, 0.0f, 0.0f};
+    PrecisionType * velDiv    = pPressB;
+
+    PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
 
     size_t listup[16*16];
     size_t listdw[16*16];
@@ -109,6 +125,7 @@ public:
     size_t normaldw[3] = {0,0,1};
 
     uint counter = 0;
+
     for(uint a = rBWP; a < rZ + rBWP; a++) {
       for(uint b = rBWP; b < rY + rBWP; b++) {
         listup[counter] = 1 *(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
@@ -120,13 +137,24 @@ public:
 
     ///////////////////////////////////////////////////////////////////////////
 
+    // Calculate acceleration
+    #pragma omp parallel for
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          calculateAcceleration(initVel,vel,acc,cell++,rX,rY,rZ,3);
+        }
+      }
+    }
+
     // Apply the pressure gradient
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          gradientPressure(pressure,pressureGradient,cell++,rX,rY,rZ);
+          gradientPressure(press,pressGrad,cell++,rX,rY,rZ);
         }
       }
     }
@@ -137,7 +165,7 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          stencilCross(phi,phiLapplacian,cell++,rX,rY,rZ,3);
+          lapplacian(initVel,velLapp,cell++,rX,rY,rZ,3);
         }
       }
     }
@@ -147,87 +175,25 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
+
+          divergenceVelocity(initVel,velDiv,cell,rX,rY,rZ);
+
           if(!(pFlags[cell] & FIXED_VELOCITY_X))
-            phi[cell*rDim+0] += (-rMu * phiLapplacian[cell*rDim+0] + pressureGradient[cell*rDim+0] - rRo * force[0]) * rDt;
+            initVel[cell*rDim+0] += (/*rMu * velLapp[cell*rDim+0]*/ - pressGrad[cell*rDim+0] + force[0] / rRo + acc[cell*rDim+0]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-            phi[cell*rDim+1] += (-rMu * phiLapplacian[cell*rDim+1] + pressureGradient[cell*rDim+1] - rRo * force[1]) * rDt;
+            initVel[cell*rDim+1] += (/*rMu * velLapp[cell*rDim+1]*/ - pressGrad[cell*rDim+1] + force[1] / rRo + acc[cell*rDim+1]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-            phi[cell*rDim+2] += (-rMu * phiLapplacian[cell*rDim+2] + pressureGradient[cell*rDim+2] - rRo * force[2]) * rDt;
+            initVel[cell*rDim+2] += (/*rMu * velLapp[cell*rDim+2]*/ - pressGrad[cell*rDim+2] + force[2] / rRo + acc[cell*rDim+2]) * rDt;
 
-          for(size_t d = 0; d < 3; d++) {
-            pPhiC[cell*rDim+d] = pressureGradient[cell*rDim+d] - rRo * force[d];
-          }
+          for(size_t d = 0; d < 3; d++)
+            pPhiC[cell*rDim+d] = velDiv[cell];//(-pressGrad[cell*rDim+d] + force[d] / rRo + acc[cell*rDim+d]) * rDt;
+
+          press[cell] += -rRo*rCC2*rDt * velDiv[cell];
 
           cell++;
         }
       }
     }
-
-    for(size_t k = rBWP; k < rZ + rBWP; k++) {
-      for(size_t j = rBWP; j < rY + rBWP; j++) {
-        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-        for(size_t i = rBWP; i < rX + rBWP; i++) {
-          divergenceVelocity(phi,phiDivergence,cell,rX,rY,rZ);
-          pressDiff[cell] = -rRo*rCC2*rDt * phiDivergence[cell];
-          cell++;
-        }
-      }
-    }
-
-    for(size_t k = rBWP; k < rZ + rBWP; k++) {
-      for(size_t j = rBWP; j < rY + rBWP; j++) {
-        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-        for(size_t i = rBWP; i < rX + rBWP; i++) {
-          stencilCross(pressDiff,pressLapplacian,cell++,rX,rY,rZ,1);
-        }
-      }
-    }
-
-    // for(size_t k = rBWP; k < rZ + rBWP; k++) {
-    //   for(size_t j = rBWP; j < rY + rBWP; j++) {
-    //     size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-    //     for(size_t i = rBWP; i < rX + rBWP; i++) {
-    //       gradientPressure(pressDiff,pressureGradient,cell,rX,rY,rZ);
-    //       if(!(pFlags[cell] & FIXED_VELOCITY_X))
-    //         phi[cell*rDim+0] -= pressureGradient[cell*rDim+0] * rPdt;
-    //       if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-    //         phi[cell*rDim+1] -= pressureGradient[cell*rDim+1] * rPdt;
-    //       if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-    //         phi[cell*rDim+2] -= pressureGradient[cell*rDim+2] * rPdt;
-    //       cell++;
-    //     }
-    //   }
-    // }
-
-    for(size_t k = rBWP; k < rZ + rBWP; k++) {
-      for(size_t j = rBWP; j < rY + rBWP; j++) {
-        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-        for(size_t i = rBWP; i < rX + rBWP; i++) {
-          if(!(pFlags[cell] & FIXED_PRESSURE))
-            pressure[cell] += pressLapplacian[cell] * rDt / rRo;
-          cell++;
-        }
-      }
-    }
-
-    // for(size_t k = rBWP; k < rZ + rBWP; k++) {
-    //   for(size_t j = rBWP; j < rY + rBWP; j++) {
-    //     size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-    //     for(size_t i = rBWP; i < rX + rBWP; i++) {
-    //       stencilCross(pPressA,pPressB,cell++,rX,rY,rZ,1);
-    //     }
-    //   }
-    // }
-    //
-    // for(size_t k = rBWP; k < rZ + rBWP; k++) {
-    //   for(size_t j = rBWP; j < rY + rBWP; j++) {
-    //     size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
-    //     for(size_t i = rBWP; i < rX + rBWP; i++) {
-    //       pPressA[cell] = pPressB[cell];
-    //       cell++;
-    //     }
-    //   }
-    // }
 
   }
 

@@ -93,8 +93,8 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++) {
-          pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = (-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
-          pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = (-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
+          pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0f;//(-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
+          pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0f;//(-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
         }
       }
     }

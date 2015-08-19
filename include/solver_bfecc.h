@@ -45,7 +45,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiA,pPhiA,pPhiD,-1.0f,0.0f,1.0f,i,j,k);
+          Apply(pPhiB,pPhiA,pPhiD,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
@@ -129,6 +129,11 @@ public:
       const size_t &k) {
 
     size_t cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
+
+    for(size_t d = 0; d < 3; d++)
+      Phi[cell*rDim+d] = PhiAuxA[cell*rDim+d];
+
+    return;
 
     PrecisionType iPhi[MAX_DIM];
     PrecisionType origin[MAX_DIM];

@@ -74,9 +74,9 @@ int main(int argc, char *argv[]) {
   PrecisionType pdt      = 0.1f;
 
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93e-5f;
+  PrecisionType mu       = 0.0f;//1.93e-5f;
   PrecisionType ka       = 1.0e-5f;
-  PrecisionType cc2      = 343.2f*343.2f;
+  PrecisionType cc2      = 100.0f;//343.2f*343.2f;
 
   FileIO io("grid",N);
 
