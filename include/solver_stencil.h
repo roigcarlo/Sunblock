@@ -139,10 +139,10 @@ public:
     for(uint a = rBWP; a < rZ + rBWP; a++) {
       for(uint b = rBWP; b < rY + rBWP; b++) {
 
-        listL[counter] = a*(rZ+rBW)*(rY+rBW)+1*(rZ+rBW)+b;
-        listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY)*(rZ+rBW)+b;
-        listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+1;
-        listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX);
+        listL[counter] = a*(rZ+rBW)*(rY+rBW)+2*(rZ+rBW)+b;
+        listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY-1)*(rZ+rBW)+b;
+        listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+2;
+        listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX-1);
         listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
         listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
 
@@ -186,6 +186,7 @@ public:
     }
 
     // Combine it all together and store it back in A
+    #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
@@ -203,6 +204,7 @@ public:
     }
 
     // Combine it all together and store it back in A
+    #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
@@ -215,6 +217,7 @@ public:
     }
 
     // Combine it all together and store it back in A
+    #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
@@ -226,10 +229,10 @@ public:
       }
     }
 
-    // applyBc(press,listL,rX*rX,normalL,1,1);
-    // applyBc(press,listR,rX*rX,normalR,1,1);
-    // applyBc(press,listF,rX*rX,normalF,1,1);
-    // applyBc(press,listB,rX*rX,normalB,1,1);
+    applyBc(press,listL,rX*rX,normalL,1,1);
+    applyBc(press,listR,rX*rX,normalR,1,1);
+    applyBc(press,listF,rX*rX,normalF,1,1);
+    applyBc(press,listB,rX*rX,normalB,1,1);
     // applyBc(press,listT,rX*rX,normalT,1,1);
     // applyBc(press,listD,rX*rX,normalD,1,1);
 

@@ -24,7 +24,7 @@ io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
 io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,0    ,"PRES");    \
 
 #define WRITE_RESULT(_STEP_)                                          \
-if (OutputStep == 0) {                                                \
+if (!(i%frec)) {                                                \
   io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i+1,Dim,"TMP"); \
   io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,i+1,Dim,"GRD"); \
   io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i+1,Dim,"VEL"); \
@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = steeps/steeps;
+  uint frec       = 1;//steeps/100;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -73,10 +73,17 @@ int main(int argc, char *argv[]) {
   PrecisionType dt       = 0.1f;
   PrecisionType pdt      = 0.1f;
 
+  // air
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93f;
+  PrecisionType mu       = 1.93e-5f;
   PrecisionType ka       = 1.0e-5f;
-  PrecisionType cc2      = 100.0f;//343.2f*343.2f;
+  PrecisionType cc2      = 343.2f*343.2f;
+
+  // water
+  // PrecisionType ro       = 998.207f;
+  // PrecisionType mu       = 1.002;
+  // PrecisionType ka       = 1.0e-5f;
+  // PrecisionType cc2      = 1481.0f*1481.0f;
 
   FileIO io("grid",N);
 
@@ -182,7 +189,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = 0.75f * calculatePressDt(dt,ro/cc2);
+  dt = 0.8f * 1.0f/(cc2*ro);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -214,18 +221,23 @@ int main(int argc, char *argv[]) {
 
   for (uint i = 0; i < steeps; i++) {
 
+    double intergale;
+
+    block->calculateRealMaxVelocity(intergale);
+
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = 0.75f * calculatePressDt(dt,ro/cc2);
+    dt = 0.8f * 1.0f/(cc2*ro);
 
+    if (!(i%frec))
     printf(
       "Step %d: %f -- dt: %f, %f, MAXV: %f, [%f,%f] \n",
       i,
       calculateMaxDt_CFL(CFL, dx, maxv),
       dt,
       (PrecisionType)h/(PrecisionType)N,
-      maxv,
+      intergale*10000.0f,
       (1.0f/64.0f)/dt,
       (maxv-oldmaxv));
 

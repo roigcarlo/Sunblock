@@ -180,6 +180,22 @@ public:
 
   }
 
+  void calculateRealMaxVelocity(PrecisionType &maxv) {
+
+    maxv = -1.0f;
+
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t i = 0; i < rX + rBW; i++ ) {
+          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
+        }
+      }
+    }
+
+  }
+
   void WriteHeatFocus() {
 
     size_t Xc, Yc, Zc;
