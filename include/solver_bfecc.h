@@ -130,11 +130,6 @@ public:
 
     size_t cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
 
-    for(size_t d = 0; d < 3; d++)
-      Phi[cell*rDim+d] = PhiAuxA[cell*rDim+d];
-
-    return;
-
     PrecisionType iPhi[MAX_DIM];
     PrecisionType origin[MAX_DIM];
     PrecisionType displacement[MAX_DIM];

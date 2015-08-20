@@ -71,7 +71,7 @@ public:
     if(bcType == 1) {
       for(size_t n = 0; n < nodeListSize; n++) {
         size_t cell = nodeList[n];
-        size_t next = cell + (rZ * rY) * normal[2] + (rZ) * normal[1] + normal[0];
+        size_t next = cell+(rZ+rBW)*(rY+rBW)*normal[2]+(rZ+rBW)*normal[1]+normal[0];
 
         buff[next] = buff[cell];
       }

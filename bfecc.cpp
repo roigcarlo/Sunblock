@@ -61,7 +61,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = steeps/20;
+  uint frec       = steeps/steeps;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -179,7 +179,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = calculatePressDt(dt,ro/cc2);
+  dt = 0.8f * calculatePressDt(dt,ro/cc2);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -214,13 +214,13 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = calculatePressDt(dt,ro/cc2);
+    dt = 0.8f * calculatePressDt(dt,ro/cc2);
 
     printf(
-      "Step %d: %f -- %f, %f, MAXV: %f, [%f,%f] \n",
+      "Step %d: %f -- dt: %f, %f, MAXV: %f, [%f,%f] \n",
       i,
       calculateMaxDt_CFL(CFL, dx, maxv),
-      CFL,
+      dt,
       (PrecisionType)h/(PrecisionType)N,
       maxv,
       (1.0f/64.0f)/dt,

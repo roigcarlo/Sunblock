@@ -78,8 +78,8 @@ private:
 
     gridB[cell] = 0;
 
-    // gridB[cell] += (gridA[(cell + 1)            *rDim+0] - gridA[(cell - 1)            *rDim+0]) * 0.5f * rIdx;
-    // gridB[cell] += (gridA[(cell + (X+BW))       *rDim+1] - gridA[(cell - (X+BW))       *rDim+1]) * 0.5f * rIdx;
+    gridB[cell] += (gridA[(cell + 1)              *rDim+0] - gridA[(cell - 1)              *rDim+0]) * 0.5f * rIdx;
+    gridB[cell] += (gridA[(cell + (X+BW))         *rDim+1] - gridA[(cell - (X+BW))         *rDim+1]) * 0.5f * rIdx;
     gridB[cell] += (gridA[(cell + (Y+rBW)*(X+rBW))*rDim+2] - gridA[(cell - (Y+rBW)*(X+rBW))*rDim+2]) * 0.5f * rIdx;
   }
 
@@ -118,18 +118,31 @@ public:
 
     PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
 
-    size_t listup[16*16];
-    size_t listdw[16*16];
+    size_t listL[16*16];
+    size_t listR[16*16];
+    size_t listF[16*16];
+    size_t listB[16*16];
+    size_t listT[16*16];
+    size_t listD[16*16];
 
-    size_t normalup[3] = {0,0,-1};
-    size_t normaldw[3] = {0,0,1};
+    size_t normalL[3] = {0,-1,0};
+    size_t normalR[3] = {0,1,0};
+    size_t normalF[3] = {-1,0,0};
+    size_t normalB[3] = {1,0,0};
+    size_t normalT[3] = {0,0,-1};
+    size_t normalD[3] = {0,0,1};
 
     uint counter = 0;
 
     for(uint a = rBWP; a < rZ + rBWP; a++) {
       for(uint b = rBWP; b < rY + rBWP; b++) {
-        listup[counter] = 1 *(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
-        listdw[counter] = rY*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+
+        listL[counter] = a*(rZ+rBW)*(rY+rBW)+1*(rZ+rBW)+b;
+        listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY)*(rZ+rBW)+b;
+        listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+1;
+        listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX);
+        listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+        listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
 
         counter++;
       }
@@ -175,25 +188,36 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-
-          divergenceVelocity(initVel,velDiv,cell,rX,rY,rZ);
-
           if(!(pFlags[cell] & FIXED_VELOCITY_X))
-            initVel[cell*rDim+0] += (/*rMu * velLapp[cell*rDim+0]*/ - pressGrad[cell*rDim+0] + force[0] / rRo + acc[cell*rDim+0]) * rDt;
+            initVel[cell*rDim+0] += (/*rMu * velLapp[cell*rDim+0]*/ - pressGrad[cell*rDim+0] + force[0] / rRo /*+ acc[cell*rDim+0]*/) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-            initVel[cell*rDim+1] += (/*rMu * velLapp[cell*rDim+1]*/ - pressGrad[cell*rDim+1] + force[1] / rRo + acc[cell*rDim+1]) * rDt;
+            initVel[cell*rDim+1] += (/*rMu * velLapp[cell*rDim+1]*/ - pressGrad[cell*rDim+1] + force[1] / rRo /*+ acc[cell*rDim+1]*/) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-            initVel[cell*rDim+2] += (/*rMu * velLapp[cell*rDim+2]*/ - pressGrad[cell*rDim+2] + force[2] / rRo + acc[cell*rDim+2]) * rDt;
-
-          for(size_t d = 0; d < 3; d++)
-            pPhiC[cell*rDim+d] = velDiv[cell];//(-pressGrad[cell*rDim+d] + force[d] / rRo + acc[cell*rDim+d]) * rDt;
-
-          press[cell] += -rRo*rCC2*rDt * velDiv[cell];
+            initVel[cell*rDim+2] += (/*rMu * velLapp[cell*rDim+2]*/ - pressGrad[cell*rDim+2] + force[2] / rRo /*+ acc[cell*rDim+2]*/) * rDt;
 
           cell++;
         }
       }
     }
+
+    // Combine it all together and store it back in A
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          divergenceVelocity(initVel,velDiv,cell,rX,rY,rZ);
+          press[cell] += -rRo*rCC2*rDt * velDiv[cell];
+          cell++;
+        }
+      }
+    }
+
+    applyBc(press,listL,16*16,normalL,1,1);
+    applyBc(press,listR,16*16,normalR,1,1);
+    applyBc(press,listF,16*16,normalF,1,1);
+    applyBc(press,listB,16*16,normalB,1,1);
+    applyBc(press,listT,16*16,normalT,1,1);
+    applyBc(press,listD,16*16,normalD,1,1);
 
   }
 
