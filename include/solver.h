@@ -21,6 +21,7 @@ public:
       pPhiB(block->pPhiB),
       pPhiC(block->pPhiC),
       pPhiD(block->pPhiD),
+      pPhiE(block->pPhiE),
       pPressA(block->pPressA),
       pPressB(block->pPressB),
       pVelocity(block->pVelocity),
@@ -230,6 +231,7 @@ protected:
   PrecisionType * pPhiB;
   PrecisionType * pPhiC;
   PrecisionType * pPhiD;
+  PrecisionType * pPhiE;
 
   PrecisionType * pPressA;
   PrecisionType * pPressB;

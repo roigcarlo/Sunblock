@@ -74,7 +74,7 @@ int main(int argc, char *argv[]) {
   PrecisionType pdt      = 0.1f;
 
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 0.0f;//1.93e-5f;
+  PrecisionType mu       = 1.93f;
   PrecisionType ka       = 1.0e-5f;
   PrecisionType cc2      = 100.0f;//343.2f*343.2f;
 
@@ -86,6 +86,7 @@ int main(int argc, char *argv[]) {
   PrecisionType * step1 = NULL;
   PrecisionType * step2 = NULL;
   PrecisionType * step3 = NULL;
+  PrecisionType * step4 = NULL;
 
   PrecisionType * pres0 = NULL;
   PrecisionType * pres1 = NULL;
@@ -101,6 +102,7 @@ int main(int argc, char *argv[]) {
   memmrg.AllocateGrid(&step1, N, N, N, 3, 1);
   memmrg.AllocateGrid(&step2, N, N, N, 3, 1);
   memmrg.AllocateGrid(&step3, N, N, N, 3, 1);
+  memmrg.AllocateGrid(&step4, N, N, N, 3, 1);
 
   // Pressure
   memmrg.AllocateGrid(&pres0, N, N, N, 1, 1);
@@ -153,6 +155,7 @@ int main(int argc, char *argv[]) {
     (PrecisionType*) step1,
     (PrecisionType*) step2,
     (PrecisionType*) step3,
+    (PrecisionType*) step4,
     (PrecisionType*) pres0,
     (PrecisionType*) pres1,
     (PrecisionType*) velf0,
@@ -179,7 +182,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = 0.8f * calculatePressDt(dt,ro/cc2);
+  dt = 0.75f * calculatePressDt(dt,ro/cc2);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -214,7 +217,7 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = 0.8f * calculatePressDt(dt,ro/cc2);
+    dt = 0.75f * calculatePressDt(dt,ro/cc2);
 
     printf(
       "Step %d: %f -- dt: %f, %f, MAXV: %f, [%f,%f] \n",
@@ -250,6 +253,7 @@ int main(int argc, char *argv[]) {
   memmrg.ReleaseGrid(&step1, 1);
   memmrg.ReleaseGrid(&step2, 1);
   memmrg.ReleaseGrid(&step3, 1);
+  memmrg.ReleaseGrid(&step4, 1);
 
   memmrg.ReleaseGrid(&pres0, 1);
   memmrg.ReleaseGrid(&pres1, 1);

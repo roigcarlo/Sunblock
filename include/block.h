@@ -14,6 +14,7 @@ public:
       PrecisionType * PhiB,
       PrecisionType * PhiC,
       PrecisionType * PhiD,
+      PrecisionType * PhiE,
       PrecisionType * PressA,
       PrecisionType * PressB,
       PrecisionType * Field,
@@ -31,6 +32,7 @@ public:
     pPhiB(PhiB),
     pPhiC(PhiC),
     pPhiD(PhiD),
+    pPhiE(PhiE),
     pPressA(PressA),
     pPressB(PressB),
     pVelocity(Field),
@@ -221,6 +223,7 @@ public:
   PrecisionType * pPhiB;
   PrecisionType * pPhiC;
   PrecisionType * pPhiD;
+  PrecisionType * pPhiE;
 
   PrecisionType * pPressA;
   PrecisionType * pPressB;

@@ -111,19 +111,21 @@ public:
     PrecisionType * acc       = pPhiD;
     PrecisionType * press     = pPressA;
 
-    PrecisionType * pressGrad = pPhiB;
+    PrecisionType * pressGrad = pPhiE;
     PrecisionType * velLapp   = pPhiC;
 
     PrecisionType * velDiv    = pPressB;
+    PrecisionType * pressDiff = pPhiD;
+    PrecisionType * pressLapp = pPhiE;
 
     PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
 
-    size_t listL[16*16];
-    size_t listR[16*16];
-    size_t listF[16*16];
-    size_t listB[16*16];
-    size_t listT[16*16];
-    size_t listD[16*16];
+    size_t listL[rX*rX];
+    size_t listR[rX*rX];
+    size_t listF[rX*rX];
+    size_t listB[rX*rX];
+    size_t listT[rX*rX];
+    size_t listD[rX*rX];
 
     size_t normalL[3] = {0,-1,0};
     size_t normalR[3] = {0,1,0};
@@ -178,7 +180,7 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          lapplacian(initVel,velLapp,cell++,rX,rY,rZ,3);
+          lapplacian(vel,velLapp,cell++,rX,rY,rZ,3);
         }
       }
     }
@@ -189,11 +191,11 @@ public:
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
           if(!(pFlags[cell] & FIXED_VELOCITY_X))
-            initVel[cell*rDim+0] += (/*rMu * velLapp[cell*rDim+0]*/ - pressGrad[cell*rDim+0] + force[0] / rRo /*+ acc[cell*rDim+0]*/) * rDt;
+            initVel[cell*rDim+0] += (-rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo + acc[cell*rDim+0]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-            initVel[cell*rDim+1] += (/*rMu * velLapp[cell*rDim+1]*/ - pressGrad[cell*rDim+1] + force[1] / rRo /*+ acc[cell*rDim+1]*/) * rDt;
+            initVel[cell*rDim+1] += (-rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo + acc[cell*rDim+1]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-            initVel[cell*rDim+2] += (/*rMu * velLapp[cell*rDim+2]*/ - pressGrad[cell*rDim+2] + force[2] / rRo /*+ acc[cell*rDim+2]*/) * rDt;
+            initVel[cell*rDim+2] += (-rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo + acc[cell*rDim+2]) * rDt;
 
           cell++;
         }
@@ -206,18 +208,30 @@ public:
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
           divergenceVelocity(initVel,velDiv,cell,rX,rY,rZ);
-          press[cell] += -rRo*rCC2*rDt * velDiv[cell];
+          pressDiff[cell] = -rRo*rCC2*rDt * velDiv[cell];
           cell++;
         }
       }
     }
 
-    applyBc(press,listL,16*16,normalL,1,1);
-    applyBc(press,listR,16*16,normalR,1,1);
-    applyBc(press,listF,16*16,normalF,1,1);
-    applyBc(press,listB,16*16,normalB,1,1);
-    applyBc(press,listT,16*16,normalT,1,1);
-    applyBc(press,listD,16*16,normalD,1,1);
+    // Combine it all together and store it back in A
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          lapplacian(pressDiff,pressLapp,cell,rX,rY,rZ,1);
+          press[cell] += pressDiff[cell] + rDt / rRo * pressLapp[cell];
+          cell++;
+        }
+      }
+    }
+
+    // applyBc(press,listL,rX*rX,normalL,1,1);
+    // applyBc(press,listR,rX*rX,normalR,1,1);
+    // applyBc(press,listF,rX*rX,normalF,1,1);
+    // applyBc(press,listB,rX*rX,normalB,1,1);
+    // applyBc(press,listT,rX*rX,normalT,1,1);
+    // applyBc(press,listD,rX*rX,normalD,1,1);
 
   }
 
