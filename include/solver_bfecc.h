@@ -23,11 +23,15 @@ public:
    **/
   void Execute() {
 
+    PrecisionType * aux_3d_0 = pBuffers[VELOCITY];
+    PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
+    PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
+
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiB,pPhiA,pPhiA,-1.0f,0.0f,1.0f,i,j,k);
+          Apply(aux_3d_1,aux_3d_0,aux_3d_0,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
@@ -36,7 +40,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiD,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
+          Apply(aux_3d_3,aux_3d_0,aux_3d_1,1.0f,1.5f,-0.5f,i,j,k);
         }
       }
     }
@@ -45,7 +49,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(pPhiB,pPhiA,pPhiD,-1.0f,0.0f,1.0f,i,j,k);
+          Apply(aux_3d_1,aux_3d_0,aux_3d_3,-1.0f,0.0f,1.0f,i,j,k);
         }
       }
     }
@@ -60,6 +64,10 @@ public:
     #define BOT(_i_) std::max(rBWP,(_i_ * rNE))
     #define TOP(_i_) rBWP + std::min(rNE*rNB-rBWP,((_i_+1) * rNE))
 
+    PrecisionType * aux_3d_0 = pBuffers[VELOCITY];
+    PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
+    PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
+
     #pragma omp parallel for
     for(size_t kk = 0; kk < rNB; kk++) {
       for(size_t jj = 0; jj < rNB; jj++) {
@@ -67,7 +75,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                Apply(pPhiB,pPhiA,pPhiA,-1.0f,0.0f,1.0f,i,j,k);
+                Apply(aux_3d_1,aux_3d_0,aux_3d_0,-1.0f,0.0f,1.0f,i,j,k);
               }
             }
           }
@@ -82,7 +90,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                Apply(pPhiC,pPhiA,pPhiB,1.0f,1.5f,-0.5f,i,j,k);
+                Apply(aux_3d_3,aux_3d_0,aux_3d_1,1.0f,1.5f,-0.5f,i,j,k);
               }
             }
           }
@@ -97,7 +105,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                Apply(pPhiA,pPhiA,pPhiC,-1.0f,0.0f,1.0f,i,j,k);
+                Apply(aux_3d_1,aux_3d_0,aux_3d_3,-1.0f,0.0f,1.0f,i,j,k);
               }
             }
           }
@@ -139,14 +147,14 @@ public:
     origin[2] = (PrecisionType)k * rDx;
 
     for(size_t d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * pVelocity[cell*rDim+d] * rDt;
+      displacement[d] = origin[d] + Sign * pBuffers[VELOCITY][cell*rDim+d] * rDt;
       if(displacement[d] < 0.0f)
         printf(
           "Error: Displacement for component %d: %f ( %f with velocity: %f) is lt 0\n",
           (int)d,
           displacement[d],
           origin[d],
-          pVelocity[cell*rDim+d]*rDt);
+          pBuffers[VELOCITY][cell*rDim+d]*rDt);
     }
 
     InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);

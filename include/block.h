@@ -10,14 +10,7 @@ public:
   typedef Indexer IndexType;
 
   Block(
-      PrecisionType * PhiA,
-      PrecisionType * PhiB,
-      PrecisionType * PhiC,
-      PrecisionType * PhiD,
-      PrecisionType * PhiE,
-      PrecisionType * PressA,
-      PrecisionType * PressB,
-      PrecisionType * Field,
+      PrecisionType ** buffers,
       uint * Flags,
       const PrecisionType &Dx,
       const PrecisionType &Omega,
@@ -28,14 +21,7 @@ public:
       const size_t &BW,
       const size_t &X, const size_t &Y, const size_t &Z,
       const size_t &NB, const size_t &NE, const size_t &DIM) :
-    pPhiA(PhiA),
-    pPhiB(PhiB),
-    pPhiC(PhiC),
-    pPhiD(PhiD),
-    pPhiE(PhiE),
-    pPressA(PressA),
-    pPressB(PressB),
-    pVelocity(Field),
+    pBuffers(buffers),
     pFlags(Flags),
     rDx(Dx),
     rIdx(1.0/Dx),
@@ -81,9 +67,9 @@ public:
       for(size_t j = rBWP; j < rY - rBWP; j++) {
         for(size_t i = rBWP; i < rX - rBWP; i++ ) {
           for(size_t d = 0; d < rDim; d++) {
-            pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
-            pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
-            pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 7.0f;
+            pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
+            pBuffers[AUX_3D_1][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
+            pBuffers[AUX_3D_2][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
           }
         }
       }
@@ -95,8 +81,7 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++) {
-          pPressA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0f;//(-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
-          pPressB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0f;//(-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
+          pBuffers[PRESSURE][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)] = 0.0f;//(-9.8f/(PrecisionType)rZ) * (PrecisionType)k;
         }
       }
     }
@@ -109,59 +94,49 @@ public:
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++) {
           for(size_t d = 0; d < rDim; d++) {
-            pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
+            pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
           }
         }
       }
     }
 
+    int toUpdate[4] = {VELOCITY,AUX_3D_0,AUX_3D_1,AUX_3D_2};
+
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
-          pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+          for(size_t b = 0; b < 4; b++ ) {
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+          }
+        }
+      }
+    }
 
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
-          pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+    for(size_t k = 1; k < rZ + rBW - 1; k++)
+      for(size_t j = 2; j < rY + rBW - 2; j++)
+        for(size_t i = 2; i < rX + rBW - 2; i++ )
+          pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.1f;
 
-          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
-          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
-          pPhiB[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
-
-          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
-          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
-          pPhiC[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+    for(size_t jk = 0; jk < rY + rBW; jk++) {
+      for(size_t i = 0; i < rX + rBW; i++ ) {
+        for(size_t b = 0; b < 4; b++ ) {
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
         }
       }
     }
 
     for(size_t jk = 0; jk < rY + rBW; jk++) {
       for(size_t i = 0; i < rX + rBW; i++ ) {
-        pVelocity[IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pVelocity[IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiA[IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiA[IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiB[IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiB[IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiC[IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiC[IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+        for(size_t b = 0; b < 4; b++ ) {
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+        }
       }
     }
 
-    for(size_t jk = 0; jk < rY + rBW; jk++) {
-      for(size_t i = 0; i < rX + rBW; i++ ) {
-        pVelocity[IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pVelocity[IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiA[IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiA[IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiB[IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiB[IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiC[IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-        pPhiC[IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-      }
-    }
   }
 
   void calculateMaxVelocity(PrecisionType &maxv) {
@@ -171,9 +146,9 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
-          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
-          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
-          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
+          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
         }
       }
     }
@@ -187,9 +162,9 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
-          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
-          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
-          maxv = std::max((PrecisionType)fabs(pVelocity[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
+          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
         }
       }
     }
@@ -218,7 +193,7 @@ public:
 
           if(d2 < rr) {
             for(size_t d = 0; d < rDim; d++) {
-              pPhiA[IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 1.0f - d2/rr;
+              pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 1.0f - d2/rr;
             }
           }
         }
@@ -235,16 +210,7 @@ public:
    * @dt:         diferential of time
    **/
 
-  PrecisionType * pPhiA;
-  PrecisionType * pPhiB;
-  PrecisionType * pPhiC;
-  PrecisionType * pPhiD;
-  PrecisionType * pPhiE;
-
-  PrecisionType * pPressA;
-  PrecisionType * pPressB;
-
-  PrecisionType * pVelocity;
+  PrecisionType ** pBuffers;
 
   uint * pFlags;
 

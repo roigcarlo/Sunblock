@@ -16,19 +16,31 @@
 #include "include/file_io.h"
 #include "include/interpolator.h"
 
-#define WRITE_INIT_R(_STEP_)                                          \
-io.WriteGidMeshBin(N,N,N);                                            \
-io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,0,Dim,"TMP");     \
-io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,0,Dim,"GRD");     \
-io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,0,Dim,"VEL");     \
-io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,0    ,"PRES");    \
+#define WRITE_INIT_R(_STEP_)                                                        \
+io.WriteGidMeshBin(N,N,N);                                                          \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,0,Dim,"AUX_3D_0");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_1");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_2");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_3");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_4");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_5");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_6");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_7");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,0,Dim,"VELOCITY");  \
+io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,0    ,"PRESSURE");  \
 
 #define WRITE_RESULT(_STEP_)                                          \
 if (!(i%frec)) {                                                \
-  io.WriteGidResultsBin3D((PrecisionType*)step0,N,N,N,i+1,Dim,"TMP"); \
-  io.WriteGidResultsBin3D((PrecisionType*)step2,N,N,N,i+1,Dim,"GRD"); \
-  io.WriteGidResultsBin3D((PrecisionType*)velf0,N,N,N,i+1,Dim,"VEL"); \
-  io.WriteGidResultsBin1D((PrecisionType*)pres0,N,N,N,i+1    ,"PRES");\
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,i+1,Dim,"AUX_3D_0");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_1");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_2");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_3");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_4");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_5");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_6");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_7");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,i+1,Dim,"VELOCITY");  \
+  io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,i+1    ,"PRESSURE");  \
   OutputStep = _STEP_;                                                \
 }                                                                     \
 OutputStep--;                                                         \
@@ -61,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = 1;//steeps/100;
+  uint frec       = steeps/100;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -75,7 +87,7 @@ int main(int argc, char *argv[]) {
 
   // air
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93e-5f;
+  PrecisionType mu       = 1.93;
   PrecisionType ka       = 1.0e-5f;
   PrecisionType cc2      = 343.2f*343.2f;
 
@@ -89,34 +101,19 @@ int main(int argc, char *argv[]) {
 
   Block         * block = NULL;
 
-  PrecisionType * step0 = NULL;
-  PrecisionType * step1 = NULL;
-  PrecisionType * step2 = NULL;
-  PrecisionType * step3 = NULL;
-  PrecisionType * step4 = NULL;
+  int               NumBuffers = 20;
+  PrecisionType **  buffers;
 
-  PrecisionType * pres0 = NULL;
-  PrecisionType * pres1 = NULL;
-
-  PrecisionType * velf0 = NULL;
+  buffers = (PrecisionType **)malloc(sizeof(PrecisionType * ) * NumBuffers);
 
   uint          * flags = NULL;
 
   MemManager memmrg(false);
 
   // Variable
-  memmrg.AllocateGrid(&step0, N, N, N, 3, 1);
-  memmrg.AllocateGrid(&step1, N, N, N, 3, 1);
-  memmrg.AllocateGrid(&step2, N, N, N, 3, 1);
-  memmrg.AllocateGrid(&step3, N, N, N, 3, 1);
-  memmrg.AllocateGrid(&step4, N, N, N, 3, 1);
-
-  // Pressure
-  memmrg.AllocateGrid(&pres0, N, N, N, 1, 1);
-  memmrg.AllocateGrid(&pres1, N, N, N, 1, 1);
-
-  // Velocity
-  memmrg.AllocateGrid(&velf0, N, N, N, 3, 1);
+  for( size_t i = 0; i < MAX_BUFF; i++) {
+    memmrg.AllocateGrid(&buffers[i], N, N, N, 3, 1);
+  }
 
   // Flags
   memmrg.AllocateGrid(&flags, N, N, N, 1, 1);
@@ -144,13 +141,13 @@ int main(int argc, char *argv[]) {
       flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Y;
       flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Z;
 
-      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
-
-      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+      //
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
     }
   }
 
@@ -158,34 +155,14 @@ int main(int argc, char *argv[]) {
   printf("Initialize\n");
 
   block = new Block(
-    (PrecisionType*) velf0,
-    (PrecisionType*) step1,
-    (PrecisionType*) step2,
-    (PrecisionType*) step3,
-    (PrecisionType*) step4,
-    (PrecisionType*) pres0,
-    (PrecisionType*) pres1,
-    (PrecisionType*) velf0,
-    (uint*) flags,
-    dx,
-    omega,
-    ro,
-    mu,
-    ka,
-    cc2,
-    BW,
-    N,
-    N,
-    N,
-    NB,
-    NE,
-    Dim
+    (PrecisionType**) buffers, (uint*) flags,
+    dx, omega, ro, mu, ka, cc2, BW,
+    N, N, N, NB, NE, Dim
   );
 
   block->Zero();
   block->InitializeVelocity();
   block->InitializePressure();
-  // block->WriteHeatFocus();
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
@@ -261,16 +238,9 @@ int main(int argc, char *argv[]) {
 
   free(block);
 
-  memmrg.ReleaseGrid(&step0, 1);
-  memmrg.ReleaseGrid(&step1, 1);
-  memmrg.ReleaseGrid(&step2, 1);
-  memmrg.ReleaseGrid(&step3, 1);
-  memmrg.ReleaseGrid(&step4, 1);
-
-  memmrg.ReleaseGrid(&pres0, 1);
-  memmrg.ReleaseGrid(&pres1, 1);
-
-  memmrg.ReleaseGrid(&velf0, 1);
+  for( size_t i = 0; i < MAX_BUFF; i++) {
+    memmrg.ReleaseGrid(&buffers[i], 1);
+  }
 
   printf("De-Allocation correct\n");
 

@@ -40,10 +40,24 @@ const PrecisionType ONESIX = 1.0/6.0;
 #define DIMENSION(A) sizeof(A)/sizeof(PrecisionType)
 
 enum Flag {
-    FIXED_VELOCITY_X = 0x000001,
-    FIXED_VELOCITY_Y = 0x000010,
-    FIXED_VELOCITY_Z = 0x000100,
-    FIXED_PRESSURE   = 0x001000
+  FIXED_VELOCITY_X = 0x000001,
+  FIXED_VELOCITY_Y = 0x000010,
+  FIXED_VELOCITY_Z = 0x000100,
+  FIXED_PRESSURE   = 0x001000
+};
+
+enum Buffers {
+  VELOCITY,
+  PRESSURE,
+  AUX_3D_0,
+  AUX_3D_1,
+  AUX_3D_2,
+  AUX_3D_3,
+  AUX_3D_4,
+  AUX_3D_5,
+  AUX_3D_6,
+  AUX_3D_7,
+  MAX_BUFF
 };
 
 #endif

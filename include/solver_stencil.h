@@ -41,6 +41,23 @@ private:
     }
   }
 
+  inline void lapplacian2o(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const size_t &cell,
+      const size_t &X,
+      const size_t &Y,
+      const size_t &Z,
+      const size_t &Dim) {
+
+    for (size_t d = 0; d < Dim; d++) {
+      gridB[cell*Dim+d] = (
+        (gridA[(cell - 1)*Dim+d] - 2.0f * gridA[(cell)*Dim+d] + gridA[(cell + 1)*Dim+d]) / (rDx * rDx) +
+        (gridA[(cell - (X+BW))*Dim+d] - 2.0f * gridA[(cell)*Dim+d] + gridA[(cell + (X+BW))*Dim+d]) / (rDx * rDx) +
+        (gridA[(cell - (Y+BW)*(X+BW))*Dim+d] - 2.0f * gridA[(cell)*Dim+d] + gridA[(cell + (Y+BW)*(X+BW))*Dim+d]) / (rDx * rDx));
+    }
+  }
+
   inline void gradientPressure(
       PrecisionType * press,
       PrecisionType * gridB,
@@ -106,19 +123,20 @@ public:
   void Execute() {
 
     // Alias for the buffers
-    PrecisionType * initVel   = pPhiA;
-    PrecisionType * vel       = pPhiB;
-    PrecisionType * acc       = pPhiD;
-    PrecisionType * press     = pPressA;
+    PrecisionType * initVel   = pBuffers[VELOCITY];
+    PrecisionType * vel       = pBuffers[AUX_3D_1];
+    PrecisionType * acc       = pBuffers[AUX_3D_3];
+    PrecisionType * press     = pBuffers[PRESSURE];
 
-    PrecisionType * pressGrad = pPhiE;
-    PrecisionType * velLapp   = pPhiC;
+    PrecisionType * pressGrad = pBuffers[AUX_3D_4];
+    PrecisionType * velLapp   = pBuffers[AUX_3D_2];
 
-    PrecisionType * velDiv    = pPressB;
-    PrecisionType * pressDiff = pPhiD;
-    PrecisionType * pressLapp = pPhiE;
+    PrecisionType * velDiv    = pBuffers[AUX_3D_5];
+    PrecisionType * pressDiff = pBuffers[AUX_3D_6];
+    PrecisionType * pressLapp = pBuffers[AUX_3D_7];
 
-    PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
+    // PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
+    PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
 
     size_t listL[rX*rX];
     size_t listR[rX*rX];
@@ -180,7 +198,7 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          lapplacian(vel,velLapp,cell++,rX,rY,rZ,3);
+          lapplacian2o(vel,velLapp,cell++,rX,rY,rZ,3);
         }
       }
     }
@@ -192,11 +210,14 @@ public:
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
           if(!(pFlags[cell] & FIXED_VELOCITY_X))
-            initVel[cell*rDim+0] += (-rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo + acc[cell*rDim+0]) * rDt;
+            initVel[cell*rDim+0] += (rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo /*+ acc[cell*rDim+0]*/) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-            initVel[cell*rDim+1] += (-rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo + acc[cell*rDim+1]) * rDt;
+            initVel[cell*rDim+1] += (rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo /*+ acc[cell*rDim+1]*/) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-            initVel[cell*rDim+2] += (-rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo + acc[cell*rDim+2]) * rDt;
+            initVel[cell*rDim+2] += (rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo /*+ acc[cell*rDim+2]*/) * rDt;
+
+          // if((pressGrad[cell*rDim+2] + force[2]) > 0.0f)
+          //  printf("%f ### %f ### %f\n",-pressGrad[cell*rDim+2] + force[2],-pressGrad[cell*rDim+2],force[2]);
 
           cell++;
         }
@@ -222,19 +243,33 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          lapplacian(pressDiff,pressLapp,cell,rX,rY,rZ,1);
-          press[cell] += pressDiff[cell] + rDt / rRo * pressLapp[cell];
+          press[cell] += pressDiff[cell];
           cell++;
         }
       }
     }
 
-    applyBc(press,listL,rX*rX,normalL,1,1);
-    applyBc(press,listR,rX*rX,normalR,1,1);
-    applyBc(press,listF,rX*rX,normalF,1,1);
-    applyBc(press,listB,rX*rX,normalB,1,1);
+    // Combine it all together and store it back in A
+    #pragma omp parallel for
+    for(size_t k = rBWP; k < rZ + rBWP; k++) {
+      for(size_t j = rBWP; j < rY + rBWP; j++) {
+        size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+        for(size_t i = rBWP; i < rX + rBWP; i++) {
+          lapplacian(press,pressLapp,cell,rX,rY,rZ,1);
+          //press[cell] += pressLapp[cell];//* 0.000001f * rDx * rDx * (1.0/rDt);
+          cell++;
+        }
+      }
+    }
+
+    // applyBc(press,listL,rX*rX,normalL,1,1);
+    // applyBc(press,listR,rX*rX,normalR,1,1);
+    // applyBc(press,listF,rX*rX,normalF,1,1);
+    // applyBc(press,listB,rX*rX,normalB,1,1);
     // applyBc(press,listT,rX*rX,normalT,1,1);
     // applyBc(press,listD,rX*rX,normalD,1,1);
+
+    copyUpToDown(initVel,3);
 
   }
 

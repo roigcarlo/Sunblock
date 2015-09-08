@@ -17,14 +17,7 @@ public:
 
   Solver(Block * block, const PrecisionType& Dt, const PrecisionType& Pdt) :
       pBlock(block),
-      pPhiA(block->pPhiA),
-      pPhiB(block->pPhiB),
-      pPhiC(block->pPhiC),
-      pPhiD(block->pPhiD),
-      pPhiE(block->pPhiE),
-      pPressA(block->pPressA),
-      pPressB(block->pPressB),
-      pVelocity(block->pVelocity),
+      pBuffers(block->pBuffers),
       pFlags(block->pFlags),
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
@@ -214,6 +207,22 @@ public:
 
   }
 
+  void copyUpToDown(PrecisionType * buff, size_t dim) {
+
+    #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
+
+    for(size_t k = 0; k < rZ + rBW; k++) {
+      for(size_t j = 0; j < rY + rBW; j++) {
+        for(size_t d = 0; d < dim; d++) {
+          buff[INDEX(j,k,2)*dim+d] = buff[INDEX(j,k,rX + rBW - 2)*dim+d];
+        }
+      }
+    }
+
+    #undef INDEX
+
+  }
+
   void Prepare() {
   }
 
@@ -227,16 +236,7 @@ protected:
 
   Block * pBlock;
 
-  PrecisionType * pPhiA;
-  PrecisionType * pPhiB;
-  PrecisionType * pPhiC;
-  PrecisionType * pPhiD;
-  PrecisionType * pPhiE;
-
-  PrecisionType * pPressA;
-  PrecisionType * pPressB;
-
-  PrecisionType * pVelocity;
+  PrecisionType ** pBuffers;
 
   uint * pFlags;
 
