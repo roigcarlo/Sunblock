@@ -20,7 +20,7 @@ private:
     }
   }
 
-  inline void lapplacian(
+  inline void smoothing(
       PrecisionType * gridA,
       PrecisionType * gridB,
       const size_t &cell,
@@ -38,6 +38,27 @@ private:
         gridA[(cell - (Y+BW)*(X+BW))*Dim+d] +        // Front
         gridA[(cell + (Y+BW)*(X+BW))*Dim+d]) /
         1.0f/6.0f;
+    }
+  }
+
+  inline void lapplacian(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const size_t &cell,
+      const size_t &X,
+      const size_t &Y,
+      const size_t &Z,
+      const size_t &Dim) {
+
+    for (size_t d = 0; d < Dim; d++) {
+      gridB[cell*Dim+d] = (
+        gridA[(cell - 1)*Dim+d]   +                  // Left
+        gridA[(cell + 1)*Dim+d]   +                  // Right
+        gridA[(cell - (X+BW))*Dim+d]   +             // Up
+        gridA[(cell + (X+BW))*Dim+d]   +             // Down
+        gridA[(cell - (Y+BW)*(X+BW))*Dim+d] +        // Front
+        gridA[(cell + (Y+BW)*(X+BW))*Dim+d] -
+        6.0f * gridA[(cell)*Dim+d]) / (rDx * rDx * rDx);
     }
   }
 
@@ -93,11 +114,20 @@ private:
       const size_t &Y,
       const size_t &Z) {
 
-    gridB[cell] = 0;
+    gridB[cell] =
+      (gridA[(cell + 1) * rDim + 0] - gridA[(cell - 1) * rDim + 0]) +
+      (gridA[(cell + (X+BW)) *rDim + 1] - gridA[(cell - (X+BW)) * rDim + 1]) +
+      (gridA[(cell + (Y+BW)*(X+BW)) * rDim + 2] - gridA[(cell - (Y+BW)*(X+BW)) * rDim + 2]);
 
-    gridB[cell] += (gridA[(cell + 1)              *rDim+0] - gridA[(cell - 1)              *rDim+0]) * 0.5f * rIdx;
-    gridB[cell] += (gridA[(cell + (X+BW))         *rDim+1] - gridA[(cell - (X+BW))         *rDim+1]) * 0.5f * rIdx;
-    gridB[cell] += (gridA[(cell + (Y+rBW)*(X+rBW))*rDim+2] - gridA[(cell - (Y+rBW)*(X+rBW))*rDim+2]) * 0.5f * rIdx;
+    gridB[cell] *= (0.5f * rIdx);
+
+    // if(gridB[cell] > 0.2f) {
+    //   printf("%d\t %f\t============================\n",cell,gridB[cell]);
+    //   printf("%f -- %f\n", gridA[(cell + 1) * rDim + 0], gridA[(cell - 1) * rDim + 0]);
+    //   printf("%f -- %f\n", gridA[(cell + (X+BW)) * rDim + 1], gridA[(cell - (X+BW)) * rDim + 1]);
+    //   printf("%f -- %f\n", gridA[(cell + (Y+BW)*(X+BW)) * rDim + 2], gridA[(cell - (Y+BW)*(X+BW)) * rDim + 2]);
+    //   printf("\t \t============================\n");
+    // }
   }
 
 public:
@@ -135,8 +165,8 @@ public:
     PrecisionType * pressDiff = pBuffers[AUX_3D_6];
     PrecisionType * pressLapp = pBuffers[AUX_3D_7];
 
-    // PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
     PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
+    // PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
 
     size_t listL[rX*rX];
     size_t listR[rX*rX];
@@ -198,7 +228,7 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          lapplacian2o(vel,velLapp,cell++,rX,rY,rZ,3);
+          lapplacian(vel,velLapp,cell++,rX,rY,rZ,3);
         }
       }
     }
@@ -210,11 +240,11 @@ public:
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
           if(!(pFlags[cell] & FIXED_VELOCITY_X))
-            initVel[cell*rDim+0] += (rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo /*+ acc[cell*rDim+0]*/) * rDt;
+            initVel[cell*rDim+0] += (rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo - acc[cell*rDim+0]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-            initVel[cell*rDim+1] += (rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo /*+ acc[cell*rDim+1]*/) * rDt;
+            initVel[cell*rDim+1] += (rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo - acc[cell*rDim+1]) * rDt;
           if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-            initVel[cell*rDim+2] += (rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo /*+ acc[cell*rDim+2]*/) * rDt;
+            initVel[cell*rDim+2] += (rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo - acc[cell*rDim+2]) * rDt;
 
           // if((pressGrad[cell*rDim+2] + force[2]) > 0.0f)
           //  printf("%f ### %f ### %f\n",-pressGrad[cell*rDim+2] + force[2],-pressGrad[cell*rDim+2],force[2]);
@@ -243,7 +273,7 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          press[cell] += pressDiff[cell];
+          smoothing(pressDiff,pressLapp,cell,rX,rY,rZ,1);
           cell++;
         }
       }
@@ -255,8 +285,8 @@ public:
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          lapplacian(press,pressLapp,cell,rX,rY,rZ,1);
-          //press[cell] += pressLapp[cell];//* 0.000001f * rDx * rDx * (1.0/rDt);
+          if(!(pFlags[cell] & FIXED_PRESSURE))
+            press[cell] += pressDiff[cell];// + pressLapp[cell];
           cell++;
         }
       }
@@ -266,10 +296,11 @@ public:
     // applyBc(press,listR,rX*rX,normalR,1,1);
     // applyBc(press,listF,rX*rX,normalF,1,1);
     // applyBc(press,listB,rX*rX,normalB,1,1);
-    // applyBc(press,listT,rX*rX,normalT,1,1);
-    // applyBc(press,listD,rX*rX,normalD,1,1);
 
-    copyUpToDown(initVel,3);
+    // copyUpToDown(initVel,3);
+
+    // applyBc(initVel,listT,rX*rX,normalT,1,3);
+    // applyBc(initVel,listD,rX*rX,normalD,1,3);
 
   }
 

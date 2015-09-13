@@ -63,9 +63,9 @@ public:
   ~Block() {}
 
   void Zero() {
-    for(size_t k = rBWP; k < rZ - rBWP; k++) {
-      for(size_t j = rBWP; j < rY - rBWP; j++) {
-        for(size_t i = rBWP; i < rX - rBWP; i++ ) {
+    for(size_t k = 0; k < rZ - 0; k++) {
+      for(size_t j = 0; j < rY - 0; j++) {
+        for(size_t i = 0; i < rX - 0; i++ ) {
           for(size_t d = 0; d < rDim; d++) {
             pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
             pBuffers[AUX_3D_1][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
@@ -114,10 +114,14 @@ public:
       }
     }
 
-    for(size_t k = 1; k < rZ + rBW - 1; k++)
-      for(size_t j = 2; j < rY + rBW - 2; j++)
-        for(size_t i = 2; i < rX + rBW - 2; i++ )
-          pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.1f;
+    // for(size_t k = 1; k < rZ + rBW - 1; k++)
+    //   for(size_t j = 2; j < rY + rBW - 2; j++)
+    //     for(size_t i = 2; i < rX + rBW - 2; i++ )
+    //       pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
+
+    for(size_t a = 1; a < rY + rBW - 1; a++)
+      for(size_t b = 2; b < rX + rBW - 1; b++)
+        pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = 6.6e-3f;
 
     for(size_t jk = 0; jk < rY + rBW; jk++) {
       for(size_t i = 0; i < rX + rBW; i++ ) {

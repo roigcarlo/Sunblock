@@ -20,27 +20,27 @@
 io.WriteGidMeshBin(N,N,N);                                                          \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,0,Dim,"AUX_3D_0");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_1");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_2");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_3");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_4");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_5");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_6");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_7");  \
-io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,0,Dim,"VELOCITY");  \
-io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,0    ,"PRESSURE");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,0,Dim,"velLappl");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_3],N,N,N,0,Dim,"accelera");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_4],N,N,N,0,Dim,"pressGra");  \
+io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_5],N,N,N,0    ,"VelDiver");  \
+io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_6],N,N,N,0    ,"PresDiff");  \
+io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_7],N,N,N,0    ,"PresLapp");  \
+io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,0,Dim,"velocity");  \
+io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,0    ,"pressure");  \
 
 #define WRITE_RESULT(_STEP_)                                          \
 if (!(i%frec)) {                                                \
   io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,i+1,Dim,"AUX_3D_0");  \
   io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_1");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_2");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_3");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_4");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_5");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_6");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_7");  \
-  io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,i+1,Dim,"VELOCITY");  \
-  io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,i+1    ,"PRESSURE");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,i+1,Dim,"velLappl");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_3],N,N,N,i+1,Dim,"accelera");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_4],N,N,N,i+1,Dim,"pressGra");  \
+  io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_5],N,N,N,i+1    ,"VelDiver");  \
+  io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_6],N,N,N,i+1    ,"PresDiff");  \
+  io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_7],N,N,N,i+1    ,"PresLapp");  \
+  io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,i+1,Dim,"velocity");  \
+  io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,i+1    ,"pressure");  \
   OutputStep = _STEP_;                                                \
 }                                                                     \
 OutputStep--;                                                         \
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = steeps/100;
+  uint frec       = 1;//steeps/1000;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 
   // air
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93;
+  PrecisionType mu       = 1.93e-5;
   PrecisionType ka       = 1.0e-5f;
   PrecisionType cc2      = 343.2f*343.2f;
 
@@ -141,13 +141,16 @@ int main(int argc, char *argv[]) {
       flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Y;
       flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Z;
 
-      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
-      //
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
+
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
     }
   }
 

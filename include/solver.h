@@ -57,7 +57,8 @@ public:
 
         // printf("%d -- %d -- %d\n",cell,prev,next);
 
-        buff[next] = 2 * buff[cell] - buff[prev];
+        for(size_t d = 0; d < dim; d++)
+          buff[next*dim+d] = 2 * buff[cell*dim+d] - buff[prev*dim+d];
       }
     }
 
@@ -67,7 +68,8 @@ public:
         size_t cell = nodeList[n];
         size_t next = cell+(rZ+rBW)*(rY+rBW)*normal[2]+(rZ+rBW)*normal[1]+normal[0];
 
-        buff[next] = buff[cell];
+        for(size_t d = 0; d < dim; d++)
+          buff[next*dim+d] = buff[cell*dim+d];
       }
     }
 
@@ -214,7 +216,7 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {
-          buff[INDEX(j,k,2)*dim+d] = buff[INDEX(j,k,rX + rBW - 2)*dim+d];
+          buff[INDEX(j,k,1)*dim+d] = buff[INDEX(j,k,rX + rBW - 2)*dim+d];
         }
       }
     }

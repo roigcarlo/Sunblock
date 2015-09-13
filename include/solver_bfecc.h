@@ -27,6 +27,39 @@ public:
     PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
     PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
 
+    size_t listL[rX*rX];
+    size_t listR[rX*rX];
+    size_t listF[rX*rX];
+    size_t listB[rX*rX];
+    size_t listT[rX*rX];
+    size_t listD[rX*rX];
+
+    size_t normalL[3] = {0,-1,0};
+    size_t normalR[3] = {0,1,0};
+    size_t normalF[3] = {-1,0,0};
+    size_t normalB[3] = {1,0,0};
+    size_t normalT[3] = {0,0,-1};
+    size_t normalD[3] = {0,0,1};
+
+    uint counter = 0;
+
+    for(uint a = rBWP; a < rZ + rBWP; a++) {
+      for(uint b = rBWP; b < rY + rBWP; b++) {
+
+        listL[counter] = a*(rZ+rBW)*(rY+rBW)+2*(rZ+rBW)+b;
+        listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY-1)*(rZ+rBW)+b;
+        listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+2;
+        listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX-1);
+        listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+        listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+
+        counter++;
+      }
+    }
+
+    applyBc(aux_3d_0,listT,rX*rX,normalT,1,3);
+    applyBc(aux_3d_0,listD,rX*rX,normalD,1,3);
+
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
@@ -35,6 +68,9 @@ public:
         }
       }
     }
+
+    applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
+    applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
@@ -45,6 +81,9 @@ public:
       }
     }
 
+    applyBc(aux_3d_3,listT,rX*rX,normalT,1,3);
+    applyBc(aux_3d_3,listD,rX*rX,normalD,1,3);
+
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
@@ -53,6 +92,9 @@ public:
         }
       }
     }
+
+    applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
+    applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
 
   }
 
