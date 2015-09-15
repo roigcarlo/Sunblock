@@ -27,19 +27,19 @@ public:
     PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
     PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
 
-    size_t listL[rX*rX];
-    size_t listR[rX*rX];
-    size_t listF[rX*rX];
-    size_t listB[rX*rX];
-    size_t listT[rX*rX];
-    size_t listD[rX*rX];
+    size_t * listL = (size_t *)malloc(sizeof(size_t)*rX*rX);
+    size_t * listR = (size_t *)malloc(sizeof(size_t)*rX*rX);
+    size_t * listF = (size_t *)malloc(sizeof(size_t)*rX*rX);
+    size_t * listB = (size_t *)malloc(sizeof(size_t)*rX*rX);
+    size_t * listT = (size_t *)malloc(sizeof(size_t)*rX*rX);
+    size_t * listD = (size_t *)malloc(sizeof(size_t)*rX*rX);
 
-    size_t normalL[3] = {0,-1,0};
-    size_t normalR[3] = {0,1,0};
-    size_t normalF[3] = {-1,0,0};
-    size_t normalB[3] = {1,0,0};
-    size_t normalT[3] = {0,0,-1};
-    size_t normalD[3] = {0,0,1};
+    int normalL[3] = {0,-1,0};
+    int normalR[3] = {0,1,0};
+    int normalF[3] = {-1,0,0};
+    int normalB[3] = {1,0,0};
+    int normalT[3] = {0,0,-1};
+    int normalD[3] = {0,0,1};
 
     uint counter = 0;
 
@@ -96,6 +96,12 @@ public:
     applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
     applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
 
+    free(listL);
+    free(listR);
+    free(listF);
+    free(listB);
+    free(listT);
+    free(listD);
   }
 
   /**

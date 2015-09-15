@@ -44,7 +44,7 @@ public:
       PrecisionType * buff,
       size_t * nodeList,
       size_t nodeListSize,
-      size_t * normal,
+      int * normal,
       int bcType,
       size_t dim) {
 
