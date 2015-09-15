@@ -202,11 +202,11 @@ public:
     InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);
 
     // TODO: This provably only needs to be done in the last part. Take into account that
-    if(!(pFlags[cell] & FIXED_VELOCITY_X))
+    // if(!(pFlags[cell] & FIXED_VELOCITY_X))
       Phi[cell*rDim+0] = WeightA * PhiAuxA[cell*rDim+0] + WeightB * iPhi[0];
-    if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+    // if(!(pFlags[cell] & FIXED_VELOCITY_Y))
       Phi[cell*rDim+1] = WeightA * PhiAuxA[cell*rDim+1] + WeightB * iPhi[1];
-    if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+    // if(!(pFlags[cell] & FIXED_VELOCITY_Z))
       Phi[cell*rDim+2] = WeightA * PhiAuxA[cell*rDim+2] + WeightB * iPhi[2];
   }
 };

@@ -60,6 +60,11 @@ private:
         gridA[(cell + (Y+BW)*(X+BW))*Dim+d] -
         6.0f * gridA[(cell)*Dim+d]) / (rDx * rDx * rDx);
     }
+
+    // for (size_t d = 0; d < Dim; d++) {
+    //   if (gridB[cell*Dim+d] > 0.0f)
+    //     printf("%d --> %f\n",cell,gridB[cell*Dim+d]);
+    // }
   }
 
   inline void lapplacian2o(
@@ -165,8 +170,8 @@ public:
     PrecisionType * pressDiff = pBuffers[AUX_3D_6];
     PrecisionType * pressLapp = pBuffers[AUX_3D_7];
 
+    // PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
     PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
-    // PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
 
     size_t listL[rX*rX];
     size_t listR[rX*rX];

@@ -121,7 +121,7 @@ public:
 
     for(size_t a = 1; a < rY + rBW - 1; a++)
       for(size_t b = 2; b < rX + rBW - 1; b++)
-        pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = 6.6e-3f;
+        pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = 10.0f;
 
     for(size_t jk = 0; jk < rY + rBW; jk++) {
       for(size_t i = 0; i < rX + rBW; i++ ) {
