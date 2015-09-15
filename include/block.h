@@ -42,14 +42,14 @@ public:
     mPaddZ = (rZ+rBW)*(rY+rBW);
     mPaddY = (rY+rBW);
 
-    //      F ------ G
-    //     /|       /|
-    //    / |      / |
-    //   B -+---- C  |
-    //   |  D ----+- E
-    //   | /      | /
-    //   |/       |/
-    //   0 ------ A
+    //      F ------- G
+    //     /|        /|
+    //    / |       / |
+    //   B -+----- C  |
+    //   |  D -----+- E
+    //   | /       | /
+    //   |/        |/
+    //   0 ------- A
 
     mPaddA = 1;
     mPaddB = (rY+rBW);
@@ -63,6 +63,8 @@ public:
   ~Block() {}
 
   void Zero() {
+
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ - 0; k++) {
       for(size_t j = 0; j < rY - 0; j++) {
         for(size_t i = 0; i < rX - 0; i++ ) {
@@ -78,6 +80,7 @@ public:
 
   void InitializePressure() {
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++) {
@@ -90,6 +93,7 @@ public:
 
   void InitializeVelocity() {
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++) {
@@ -102,6 +106,7 @@ public:
 
     int toUpdate[4] = {VELOCITY,AUX_3D_0,AUX_3D_1,AUX_3D_2};
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
@@ -119,10 +124,12 @@ public:
     //     for(size_t i = 2; i < rX + rBW - 2; i++ )
     //       pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
+    #pragma omp parallel for
     for(size_t a = 1; a < rY + rBW - 1; a++)
       for(size_t b = 2; b < rX + rBW - 1; b++)
         pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = 10.0f;
 
+    #pragma omp parallel for
     for(size_t jk = 0; jk < rY + rBW; jk++) {
       for(size_t i = 0; i < rX + rBW; i++ ) {
         for(size_t b = 0; b < 4; b++ ) {
@@ -132,6 +139,7 @@ public:
       }
     }
 
+    #pragma omp parallel for
     for(size_t jk = 0; jk < rY + rBW; jk++) {
       for(size_t i = 0; i < rX + rBW; i++ ) {
         for(size_t b = 0; b < 4; b++ ) {
@@ -183,6 +191,7 @@ public:
   	Yc = (size_t)(2.0f / 5.5f * (PrecisionType)(rY));
   	Zc = (size_t)(1.0f / 2.0f * (PrecisionType)(rZ));
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++) {

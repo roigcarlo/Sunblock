@@ -126,19 +126,19 @@ public:
     // PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
     PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
 
-    size_t * listL = (size_t *)malloc(sizeof(size_t)*rX*rX);
-    size_t * listR = (size_t *)malloc(sizeof(size_t)*rX*rX);
-    size_t * listF = (size_t *)malloc(sizeof(size_t)*rX*rX);
-    size_t * listB = (size_t *)malloc(sizeof(size_t)*rX*rX);
-    size_t * listT = (size_t *)malloc(sizeof(size_t)*rX*rX);
-    size_t * listD = (size_t *)malloc(sizeof(size_t)*rX*rX);
+    size_t listL[rX*rX];
+    size_t listR[rX*rX];
+    size_t listF[rX*rX];
+    size_t listB[rX*rX];
+    size_t listT[rX*rX];
+    size_t listD[rX*rX];
 
-    int normalL[3] = {0,-1,0};
-    int normalR[3] = {0,1,0};
-    int normalF[3] = {-1,0,0};
-    int normalB[3] = {1,0,0};
-    int normalT[3] = {0,0,-1};
-    int normalD[3] = {0,0,1};
+    size_t normalL[3] = {0,-1,0};
+    size_t normalR[3] = {0,1,0};
+    size_t normalF[3] = {-1,0,0};
+    size_t normalB[3] = {1,0,0};
+    size_t normalT[3] = {0,0,-1};
+    size_t normalD[3] = {0,0,1};
 
     uint counter = 0;
 
@@ -240,7 +240,7 @@ public:
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
           if(!(pFlags[cell] & FIXED_PRESSURE))
-            press[cell] += pressDiff[cell];
+            press[cell] += pressDiff[cell] * rDt / rRo;
           cell++;
         }
       }
@@ -255,13 +255,6 @@ public:
 
     // applyBc(initVel,listT,rX*rX,normalT,1,3);
     // applyBc(initVel,listD,rX*rX,normalD,1,3);
-
-    free(listL);
-    free(listR);
-    free(listF);
-    free(listB);
-    free(listT);
-    free(listD);
 
   }
 

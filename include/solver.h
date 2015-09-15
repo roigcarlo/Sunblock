@@ -44,18 +44,17 @@ public:
       PrecisionType * buff,
       size_t * nodeList,
       size_t nodeListSize,
-      int * normal,
+      size_t * normal,
       int bcType,
       size_t dim) {
 
     // Difference
     if(bcType == 0) {
+      #pragma omp parallel for
       for(size_t n = 0; n < nodeListSize; n++) {
         size_t cell = nodeList[n];
         size_t prev = cell-(rZ+rBW)*(rY+rBW)*normal[2]-(rZ+rBW)*normal[1]-normal[0];
         size_t next = cell+(rZ+rBW)*(rY+rBW)*normal[2]+(rZ+rBW)*normal[1]+normal[0];
-
-        // printf("%d -- %d -- %d\n",cell,prev,next);
 
         for(size_t d = 0; d < dim; d++)
           buff[next*dim+d] = 2 * buff[cell*dim+d] - buff[prev*dim+d];
@@ -64,6 +63,7 @@ public:
 
     // Copy
     if(bcType == 1) {
+      #pragma omp parallel for
       for(size_t n = 0; n < nodeListSize; n++) {
         size_t cell = nodeList[n];
         size_t next = cell+(rZ+rBW)*(rY+rBW)*normal[2]+(rZ+rBW)*normal[1]+normal[0];
@@ -79,6 +79,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t a = 0; a < rY + rBW; a++) {
       for(size_t b = 0; b < rX + rBW; b++) {
         for(size_t d = 0; d < dim; d++) {
@@ -101,6 +102,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {
@@ -117,6 +119,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {
@@ -133,6 +136,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t i = 0; i < rX + rBW; i++) {
       for(size_t k = 0; k < rZ + rBW; k++) {
         for(size_t d = 0; d < dim; d++) {
@@ -149,6 +153,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t i = 0; i < rX + rBW; i++) {
       for(size_t k = 0; k < rZ + rBW; k++) {
         for(size_t d = 0; d < dim; d++) {
@@ -165,6 +170,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t i = 0; i < rX + rBW; i++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {
@@ -181,6 +187,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t i = 0; i < rX + rBW; i++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {
@@ -197,6 +204,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {
@@ -213,6 +221,7 @@ public:
 
     #define INDEX(I,J,K) IndexType::GetIndex((I),(J),(K),pBlock->mPaddY,pBlock->mPaddZ)
 
+    #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t d = 0; d < dim; d++) {

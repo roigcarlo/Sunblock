@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = 10;//steeps/25;//steeps/1000;
+  uint frec       = steeps/10;//steeps/1000;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 
   // air
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93e-1;
+  PrecisionType mu       = 1.93e-3;
   PrecisionType ka       = 1.0e-5f;
   PrecisionType cc2      = 343.2f*343.2f;
 
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = 0.8f * 1.0f/(cc2*ro);
+  dt = 0.8f * 2.5f/(cc2*ro);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -208,7 +208,7 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = 0.8f * 1.0f/(cc2*ro);
+    dt = 0.8f * 2.5f/(cc2*ro);
 
     if (!(i%frec))
     printf(
@@ -223,6 +223,7 @@ int main(int argc, char *argv[]) {
 
     AdvectionSolver.Execute();
     DiffusionSolver.Execute();
+
     WRITE_RESULT(frec)
   }
 
