@@ -17,7 +17,7 @@
 #include "include/interpolator.h"
 
 #define WRITE_INIT_R(_STEP_)                                                        \
-io.WriteGidMeshBin(N,N,N);                                                          \
+io.WriteGidMeshBin(dx,N,N,N);                                                          \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,0,Dim,"AUX_3D_0");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_1");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,0,Dim,"velLappl");  \
@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
 
   block->calculateMaxVelocity(maxv);
   dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = 0.8f * 2.5f/(cc2*ro);
+  dt = 0.8f * 1.0f/(cc2*ro);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -208,14 +208,14 @@ int main(int argc, char *argv[]) {
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
     dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = 0.8f * 2.5f/(cc2*ro);
+    dt = 0.8f * 1.0f/(cc2*ro);
 
     if (!(i%frec))
     printf(
-      "Step %d: %f -- dt: %f, %f, MAXV: %f, [%f,%f] \n",
+      "Step %d: %f -- Seconds: %f, %f, MAXV: %f, [%f,%f] \n",
       i,
       calculateMaxDt_CFL(CFL, dx, maxv),
-      dt,
+      dt * i,
       (PrecisionType)h/(PrecisionType)N,
       intergale*10000.0f,
       (1.0f/64.0f)/dt,
@@ -237,8 +237,26 @@ int main(int argc, char *argv[]) {
   duration = (end - start) / 1000.0f;
 #endif
 
+  PrecisionType values_to_print[17] = {
+    1.000,0.977,0.969,0.961,0.953,0.852,0.734,0.617,
+    0.500,0.453,0.281,0.172,0.102,0.070,0.063,0.055,0.000
+  };
+
+  for(size_t i = 0; i < 17; i++) {
+
+    PrecisionType values[3] = {0.0f, 0.0f, 0.0f};
+    PrecisionType coords[3] = {h/2, h/2, values_to_print[i]};
+
+    PrecisionType * velocity = buffers[VELOCITY];
+
+    TrilinealInterpolator::Interpolate(block,velocity,values,coords,3);
+
+    printf("%f\t%f\n",values_to_print[i],values[0]);
+  }
+
   printf("Total time:\t %f s\n",duration);
   printf("Step  time:\t %f s\n",duration/steeps);
+  printf("Time per sec:\t %f s\n",duration/(steeps*dt));
 
   free(block);
 

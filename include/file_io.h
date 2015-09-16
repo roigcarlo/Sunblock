@@ -146,6 +146,7 @@ public:
    * @Z:        Z-Size of the grid
    **/
   void WriteGidMesh(
+      const PrecisionType &Dx,
       const size_t &X,
       const size_t &Y,
       const size_t &Z) {
@@ -159,7 +160,7 @@ public:
       for(size_t j = 0; j < Y + BW; j++) {
         size_t cell = k*(Z+BW)*(Y+BW)+j*(Y+BW)+BWP;
         for(size_t i = 0; i < X + BW; i++) {
-          (*mesh_file) << cell++ << "  " << i << "  " << j << "  " << k << std::endl;
+          (*mesh_file) << cell++ << "  " << i*Dx << "  " << j*Dx << "  " << k*Dx << std::endl;
         }
       }
     }
@@ -226,6 +227,7 @@ public:
    * @Z:        Z-Size of the grid
    **/
   void WriteGidMeshWithSkinBin(
+      const PrecisionType &Dx,
       const size_t &X,
       const size_t &Y,
       const size_t &Z) {
@@ -241,9 +243,10 @@ public:
         for(size_t i = 0; i < X + BW; i++) {
           GiD_WriteCoordinates(
             (int)cell++,
-            (PrecisionType)i,
-            (PrecisionType)j,
-            (PrecisionType)k);
+            (PrecisionType)i*Dx,
+            (PrecisionType)j*Dx,
+            (PrecisionType)k*Dx
+          );
         }
       }
     }
@@ -282,6 +285,7 @@ public:
    * @Z:        Z-Size of the grid
    **/
   void WriteGidMeshBin(
+      const PrecisionType &Dx,
       const size_t &X,
       const size_t &Y,
       const size_t &Z) {
@@ -297,9 +301,10 @@ public:
         for(size_t i = 0; i < X + BW; i++) {
           GiD_WriteCoordinates(
             (int)cell++,
-            (PrecisionType)i,
-            (PrecisionType)j,
-            (PrecisionType)k);
+            (PrecisionType)1.0f-i*Dx,
+            (PrecisionType)1.0f-j*Dx,
+            (PrecisionType)1.0f-k*Dx
+          );
         }
       }
     }

@@ -127,7 +127,7 @@ public:
     #pragma omp parallel for
     for(size_t a = 1; a < rY + rBW - 1; a++)
       for(size_t b = 2; b < rX + rBW - 1; b++)
-        pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = 10.0f;
+        pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = -1.0f;
 
     #pragma omp parallel for
     for(size_t jk = 0; jk < rY + rBW; jk++) {

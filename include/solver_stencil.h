@@ -240,7 +240,7 @@ public:
         size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
         for(size_t i = rBWP; i < rX + rBWP; i++) {
           if(!(pFlags[cell] & FIXED_PRESSURE))
-            press[cell] += pressDiff[cell] * rDt / rRo;
+            press[cell] += pressDiff[cell] + pressLapp[cell] * ( rDt / rRo ) * 1.0f;
           cell++;
         }
       }
