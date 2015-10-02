@@ -1,6 +1,6 @@
 #include "solver.h"
 
-class BfeccSolver : public Solver {
+class BfeccSolver : public Solver<BfeccSolver> {
 public:
 
   BfeccSolver(Block * block, const PrecisionType& Dt, const PrecisionType& Pdt) :
@@ -12,16 +12,16 @@ public:
 
   }
 
-  void Prepare() {
+  void Prepare_impl() {
   }
 
-  void Finish() {
+  void Finish_impl() {
   }
 
   /**
    * Executes the solver in parallel
    **/
-  void Execute() {
+  void Execute_impl() {
 
     PrecisionType * aux_3d_0 = pBuffers[VELOCITY];
     PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
@@ -64,7 +64,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(aux_3d_1,aux_3d_0,aux_3d_0,-1.0f,0.0f,1.0f,i,j,k);
+          ApplyForth(aux_3d_1,aux_3d_0,aux_3d_0,i,j,k);
         }
       }
     }
@@ -76,7 +76,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(aux_3d_3,aux_3d_0,aux_3d_1,1.0f,1.5f,-0.5f,i,j,k);
+          ApplyBack(aux_3d_3,aux_3d_1,aux_3d_0,i,j,k);
         }
       }
     }
@@ -88,7 +88,7 @@ public:
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          Apply(aux_3d_1,aux_3d_0,aux_3d_3,-1.0f,0.0f,1.0f,i,j,k);
+          ApplyEcc(aux_3d_1,aux_3d_3,i,j,k);
         }
       }
     }
@@ -101,12 +101,93 @@ public:
   /**
    * Executes the solver in parallel using blocking
    **/
-  void ExecuteBlock() {
+  void ExecuteTask_impl() {
 
     #define BOT(_i_) std::max(rBWP,(_i_ * rNE))
     #define TOP(_i_) rBWP + std::min(rNE*rNB-rBWP,((_i_+1) * rNE))
 
-    PrecisionType * aux_3d_0 = pBuffers[VELOCITY];
+    PrecisionType * aux_3d_0 = pBuffers[AUX_3D_0];
+    PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
+    PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
+
+    int bt = (rX + rBW);
+    int ss = 2;
+    int CFL = 1;
+    int slice = bt*bt;
+    int slice3D = slice * 3;
+
+    #pragma omp parallel
+    #pragma omp single
+    {
+
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task                                  \
+          depend(in:aux_3d_0[(kk)*slice3D:(CFL)*slice3D]) \
+          depend(out:aux_3d_1[(kk)*slice3D:(CFL)*slice3D])
+        {
+          for(size_t k = kk; k < kk+ss; k++) {
+            for(size_t j = rBWP; j < rY + rBWP; j++) {
+              for(size_t i = rBWP; i < rX + rBWP; i++) {
+                ApplyBack(aux_3d_1,aux_3d_0,aux_3d_0,i,j,k);
+              }
+            }
+          }
+        }
+      }
+
+      #pragma omp taskwait
+
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task                                  \
+          depend(in:aux_3d_0[(kk)*bt*bt*3:(CFL)*bt*bt*3]) \
+          depend(in:aux_3d_1[(kk)*bt*bt*3:(CFL)*bt*bt*3]) \
+          depend(out:aux_3d_3[(kk)*bt*bt*3:(CFL)*bt*bt*3])
+        {
+          for(size_t k = kk; k < kk+ss; k++) {
+            for(size_t j = rBWP; j < rY + rBWP; j++) {
+              for(size_t i = rBWP; i < rX + rBWP; i++) {
+                ApplyForth(aux_3d_3,aux_3d_1,aux_3d_0,i,j,k);
+              }
+            }
+          }
+        }
+      }
+
+      #pragma omp taskwait
+
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task                                    \
+          depend(in:aux_3d_3[(kk)*slice3D:(CFL)*slice3D])   \
+          depend(out:aux_3d_1[(kk)*slice3D:(CFL)*slice3D])
+        {
+          for(size_t k = kk; k < kk+ss; k++) {
+            for(size_t j = rBWP; j < rY + rBWP; j++) {
+              for(size_t i = rBWP; i < rX + rBWP; i++) {
+                ApplyEcc(aux_3d_0,aux_3d_3,i,j,k);
+              }
+            }
+          }
+        }
+      }
+
+    }
+
+    #pragma omp taskwait
+
+    #undef BOT
+    #undef TOP
+
+  }
+
+  /**
+   * Executes the solver in parallel using blocking
+   **/
+  void ExecuteBlock_impl() {
+
+    #define BOT(_i_) std::max(rBWP,(_i_ * rNE))
+    #define TOP(_i_) rBWP + std::min(rNE*rNB-rBWP,((_i_+1) * rNE))
+
+    PrecisionType * aux_3d_0 = pBuffers[AUX_3D_0];
     PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
     PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
 
@@ -117,7 +198,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                Apply(aux_3d_1,aux_3d_0,aux_3d_0,-1.0f,0.0f,1.0f,i,j,k);
+                ApplyBack(aux_3d_1,aux_3d_0,aux_3d_0,i,j,k);
               }
             }
           }
@@ -132,7 +213,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                Apply(aux_3d_3,aux_3d_0,aux_3d_1,1.0f,1.5f,-0.5f,i,j,k);
+                ApplyForth(aux_3d_3,aux_3d_1,aux_3d_0,i,j,k);
               }
             }
           }
@@ -147,7 +228,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                Apply(aux_3d_1,aux_3d_0,aux_3d_3,-1.0f,0.0f,1.0f,i,j,k);
+                ApplyEcc(aux_3d_0,aux_3d_3,i,j,k);
               }
             }
           }
@@ -160,6 +241,7 @@ public:
 
   }
 
+  void ExecuteVector_impl() {}
   /**
    * Performs the bfecc operation over a given element
    * sign:    direction of the interpolation ( -1.0 backward, 1.0 forward )
@@ -167,13 +249,10 @@ public:
    * weightB: weigth of the second operator (B)
    * @i,j,k:  Index of the cell
    **/
-  void Apply(
+  void ApplyBack(
       PrecisionType * Phi,
       PrecisionType * PhiAuxA,
       PrecisionType * PhiAuxB,
-      const PrecisionType &Sign,
-      const PrecisionType &WeightA,
-      const PrecisionType &WeightB,
       const size_t &i,
       const size_t &j,
       const size_t &k) {
@@ -189,24 +268,70 @@ public:
     origin[2] = (PrecisionType)k * rDx;
 
     for(size_t d = 0; d < 3; d++) {
-      displacement[d] = origin[d] + Sign * pBuffers[VELOCITY][cell*rDim+d] * rDt;
-      if(displacement[d] < 0.0f)
-        printf(
-          "Error: Displacement for component %d: %f ( %f with velocity: %f) is lt 0\n",
-          (int)d,
-          displacement[d],
-          origin[d],
-          pBuffers[VELOCITY][cell*rDim+d]*rDt);
+      displacement[d] = origin[d] - pBuffers[VELOCITY][cell*rDim+d] * rDt;
     }
 
     InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);
 
-    // TODO: This provably only needs to be done in the last part. Take into account that
-    // if(!(pFlags[cell] & FIXED_VELOCITY_X))
-      Phi[cell*rDim+0] = WeightA * PhiAuxA[cell*rDim+0] + WeightB * iPhi[0];
-    // if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-      Phi[cell*rDim+1] = WeightA * PhiAuxA[cell*rDim+1] + WeightB * iPhi[1];
-    // if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-      Phi[cell*rDim+2] = WeightA * PhiAuxA[cell*rDim+2] + WeightB * iPhi[2];
+    Phi[cell*rDim+0] = iPhi[0];
+    Phi[cell*rDim+1] = iPhi[1];
+    Phi[cell*rDim+2] = iPhi[2];
+  }
+
+  void ApplyForth(
+      PrecisionType * Phi,
+      PrecisionType * PhiAuxA,
+      PrecisionType * PhiAuxB,
+      const size_t &i,
+      const size_t &j,
+      const size_t &k) {
+
+    size_t cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
+
+    PrecisionType iPhi[MAX_DIM];
+    PrecisionType origin[MAX_DIM];
+    PrecisionType displacement[MAX_DIM];
+
+    origin[0] = (PrecisionType)i * rDx;
+    origin[1] = (PrecisionType)j * rDx;
+    origin[2] = (PrecisionType)k * rDx;
+
+    for(size_t d = 0; d < 3; d++) {
+      displacement[d] = origin[d] + pBuffers[VELOCITY][cell*rDim+d] * rDt;
+    }
+
+    InterpolateType::Interpolate(pBlock,PhiAuxA,(PrecisionType*)iPhi,displacement,rDim);
+
+    Phi[cell*rDim+0] = 1.5f * PhiAuxB[cell*rDim+0] - 0.5f * iPhi[0];
+    Phi[cell*rDim+1] = 1.5f * PhiAuxB[cell*rDim+1] - 0.5f * iPhi[1];
+    Phi[cell*rDim+2] = 1.5f * PhiAuxB[cell*rDim+2] - 0.5f * iPhi[2];
+  }
+
+  void ApplyEcc(
+      PrecisionType * Phi,
+      PrecisionType * PhiAuxA,
+      const size_t &i,
+      const size_t &j,
+      const size_t &k) {
+
+    size_t cell = IndexType::GetIndex(i,j,k,pBlock->mPaddY,pBlock->mPaddZ);
+
+    PrecisionType iPhi[MAX_DIM];
+    PrecisionType origin[MAX_DIM];
+    PrecisionType displacement[MAX_DIM];
+
+    origin[0] = (PrecisionType)i * rDx;
+    origin[1] = (PrecisionType)j * rDx;
+    origin[2] = (PrecisionType)k * rDx;
+
+    for(size_t d = 0; d < 3; d++) {
+      displacement[d] = origin[d] - pBuffers[VELOCITY][cell*rDim+d] * rDt;
+    }
+
+    InterpolateType::Interpolate(pBlock,PhiAuxA,(PrecisionType*)iPhi,displacement,rDim);
+
+    Phi[cell*rDim+0] = iPhi[0];
+    Phi[cell*rDim+1] = iPhi[1];
+    Phi[cell*rDim+2] = iPhi[2];
   }
 };

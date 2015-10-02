@@ -1,7 +1,7 @@
 #include "solver.h"
 #include "simd.h"
 
-class StencilSolver : public Solver {
+class StencilSolver : public Solver<StencilSolver> {
 private:
 
   inline void calculateAcceleration(
@@ -12,7 +12,7 @@ private:
       const size_t &Dim) {
 
     for (size_t d = 0; d < Dim; d++) {
-      gridC[cell*Dim+d] = (gridB[cell*Dim+d] - gridA[cell*Dim+d])/rDt;
+      gridC[cell*Dim+d] = (gridB[cell*Dim+d] - gridA[cell*Dim+d]) * rIdt;
     }
   }
 
@@ -47,7 +47,7 @@ private:
         gridA[(cell + (rX+BW))*Dim+d]   +             // Down
         gridA[(cell - (rY+BW)*(rX+BW))*Dim+d] +        // Front
         gridA[(cell + (rY+BW)*(rX+BW))*Dim+d] -
-        6.0f * gridA[(cell)*Dim+d]) / (rDx * rDx * rDx);
+        6.0f * gridA[(cell)*Dim+d]) * rI3dx;
     }
   }
 
@@ -99,16 +99,16 @@ public:
 
   }
 
-  void Prepare() {
+  void Prepare_impl() {
   }
 
-  void Finish() {
+  void Finish_impl() {
   }
 
   /**
    * Executes the solver in parallel
    **/
-  void Execute() {
+  void Execute_impl() {
 
     // Alias for the buffers
     PrecisionType * initVel   = pBuffers[VELOCITY];
@@ -258,7 +258,208 @@ public:
 
   }
 
-  void ExecuteVector() {
+  void ExecuteBlock_impl() {}
+
+  void ExecuteTask_impl() {
+
+    // Alias for the buffers
+    PrecisionType * initVel   = pBuffers[VELOCITY];
+    PrecisionType * vel       = pBuffers[AUX_3D_1];
+    PrecisionType * acc       = pBuffers[AUX_3D_3];
+    PrecisionType * press     = pBuffers[PRESSURE];
+
+    PrecisionType * pressGrad = pBuffers[AUX_3D_4];
+    PrecisionType * velLapp   = pBuffers[AUX_3D_2];
+
+    PrecisionType * velDiv    = pBuffers[AUX_3D_5];
+    PrecisionType * pressDiff = pBuffers[AUX_3D_6];
+    PrecisionType * pressLapp = pBuffers[AUX_3D_7];
+
+    // PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
+    PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
+
+    // size_t listL[rX*rX];
+    // size_t listR[rX*rX];
+    // size_t listF[rX*rX];
+    // size_t listB[rX*rX];
+    // size_t listT[rX*rX];
+    // size_t listD[rX*rX];
+    //
+    // size_t normalL[3] = {0,-1,0};
+    // size_t normalR[3] = {0,1,0};
+    // size_t normalF[3] = {-1,0,0};
+    // size_t normalB[3] = {1,0,0};
+    // size_t normalT[3] = {0,0,-1};
+    // size_t normalD[3] = {0,0,1};
+    //
+    // uint counter = 0;
+
+    // #pragma omp parallel for
+    // for(uint a = rBWP; a < rZ + rBWP; a++) {
+    //   for(uint b = rBWP; b < rY + rBWP; b++) {
+    //
+    //     listL[counter] = a*(rZ+rBW)*(rY+rBW)+2*(rZ+rBW)+b;
+    //     listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY-1)*(rZ+rBW)+b;
+    //     listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+2;
+    //     listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX-1);
+    //     listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+    //     listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+    //
+    //     counter++;
+    //   }
+    // }
+
+    ///////////////////////////////////////////////////////////////////////////
+    int bt = (rX + rBW);
+    int ss = 2;
+    int slice = bt*bt;
+    int slice3D = slice * 3;
+
+    #pragma omp parallel
+    #pragma omp single
+    {
+
+      // Calculate acceleration
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:initVel[(kk)*slice3D:ss*slice3D]) \
+          depend(in:vel[(kk)*slice3D:ss*slice3D]) \
+          depend(out:acc[(kk)*slice3D:ss*slice3D])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              calculateAcceleration(initVel,vel,acc,cell++,3);
+            }
+          }
+        }
+      }
+
+      // Apply the pressure gradient
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:press[(kk)*slice:ss*slice]) \
+          depend(out:pressGrad[(kk)*slice3D:ss*slice3D])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              gradient(press,pressGrad,cell++);
+            }
+          }
+        }
+      }
+
+      // divergence of the gradient of the velocity
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:vel[(kk)*slice3D:ss*slice3D]) \
+          depend(out:velLapp[(kk)*slice3D:ss*slice3D])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              lapplacian(vel,velLapp,cell++,3);
+            }
+          }
+        }
+      }
+
+      #pragma omp taskwait
+
+      // Combine it all together and store it back in A
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:velLapp[(kk)*slice3D:ss*slice3D]) \
+          depend(in:pressGrad[(kk)*slice3D:ss*slice3D]) \
+          depend(in:acc[(kk)*slice3D:ss*slice3D]) \
+          depend(out:initVel[(kk)*slice3D:ss*slice3D])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              if(!(pFlags[cell] & FIXED_VELOCITY_X))
+                initVel[cell*rDim+0] += (rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo - acc[cell*rDim+0]) * rDt;
+              if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+                initVel[cell*rDim+1] += (rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo - acc[cell*rDim+1]) * rDt;
+              if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+                initVel[cell*rDim+2] += (rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo - acc[cell*rDim+2]) * rDt;
+              cell++;
+            }
+          }
+        }
+      }
+
+      // Combine it all together and store it back in A
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:initVel[(kk)*slice3D:ss*slice3D]) \
+          depend(out:velDiv[(kk)*slice:ss*slice])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              divergence(initVel,velDiv,cell);
+              pressDiff[cell] = -rRo*rCC2*rDt * velDiv[cell];
+              cell++;
+            }
+          }
+        }
+      }
+
+      // Combine it all together and store it back in A
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:pressDiff[(kk)*slice:ss*slice]) \
+          depend(out:pressLapp[(kk)*slice:ss*slice])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              smoothing(pressDiff,pressLapp,cell,1);
+              cell++;
+            }
+          }
+        }
+      }
+
+      PrecisionType lapp_fact = ( rDt / rRo ) * 1.0f;
+
+      // Combine it all together and store it back in A
+      for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+        #pragma omp task \
+          depend(in:pressLapp[(kk)*slice:ss*slice]) \
+          depend(in:pressDiff[(kk)*slice:ss*slice]) \
+          depend(out:press[(kk)*slice:ss*slice])
+        for(size_t k = kk; k < kk+ss; k++) {
+          for(size_t j = rBWP; j < rY + rBWP; j++) {
+            size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+            for(size_t i = rBWP; i < rX + rBWP; i++) {
+              if(!(pFlags[cell] & FIXED_PRESSURE))
+                press[cell] += pressDiff[cell] + pressLapp[cell] * lapp_fact;
+              cell++;
+            }
+          }
+        }
+      }
+
+    }
+
+    #pragma omp taskwait
+
+    // applyBc(press,listL,rX*rX,normalL,1,1);
+    // applyBc(press,listR,rX*rX,normalR,1,1);
+    // applyBc(press,listF,rX*rX,normalF,1,1);
+    // applyBc(press,listB,rX*rX,normalB,1,1);
+
+    // copyUpToDown(initVel,3);
+
+    // applyBc(initVel,listT,rX*rX,normalT,1,3);
+    // applyBc(initVel,listD,rX*rX,normalD,1,3);
+
+  }
+
+  void ExecuteVector_impl() {
 
     // TODO: Implement this with the new arrays
 

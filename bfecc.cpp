@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = steeps/10;//steeps/1000;
+  uint frec       = 1;//steeps;
 
   PrecisionType h        = atoi(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -164,12 +164,17 @@ int main(int argc, char *argv[]) {
   );
 
   block->Zero();
+  printf("Zero\n");
   block->InitializeVelocity();
+  printf("InitializeVelocity\n");
   block->InitializePressure();
+  printf("InitializePressure\n");
+  block->WriteHeatFocus();
+  printf("WriteHeatFocus\n");
 
   block->calculateMaxVelocity(maxv);
-  dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = 0.8f * 1.0f/(cc2*ro);
+  dt = 0.05;// calculateMaxDt_CFL(CFL,dx,maxv);
+  // dt = 0.8f * 1.0f/(cc2*ro);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -178,8 +183,8 @@ int main(int argc, char *argv[]) {
     (PrecisionType)h/(PrecisionType)N,
     maxv);
 
-  BfeccSolver   AdvectionSolver(block,dt,pdt);
-  StencilSolver DiffusionSolver(block,dt,pdt);
+  Solver<BfeccSolver>   AdvectionSolver(block,dt,pdt);
+  Solver<StencilSolver> DiffusionSolver(block,dt,pdt);
 
   WRITE_INIT_R(frec)
 
@@ -207,8 +212,8 @@ int main(int argc, char *argv[]) {
 
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
-    dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = 0.8f * 1.0f/(cc2*ro);
+    dt = 0.05;//calculateMaxDt_CFL(CFL,dx,maxv);
+    // dt = 0.8f * 1.0f/(cc2*ro);
 
     if (!(i%frec))
     printf(
@@ -221,8 +226,8 @@ int main(int argc, char *argv[]) {
       (1.0f/64.0f)/dt,
       (maxv-oldmaxv));
 
-    AdvectionSolver.Execute();
-    DiffusionSolver.Execute();
+    AdvectionSolver.ExecuteTask();
+    // DiffusionSolver.ExecuteTask();
 
     WRITE_RESULT(frec)
   }
@@ -236,7 +241,7 @@ int main(int argc, char *argv[]) {
   end = GetTickCount();
   duration = (end - start) / 1000.0f;
 #endif
-
+/*
   PrecisionType values_to_print[17] = {
     1.000,0.977,0.969,0.961,0.953,0.852,0.734,0.617,
     0.500,0.453,0.281,0.172,0.102,0.070,0.063,0.055,0.000
@@ -253,7 +258,7 @@ int main(int argc, char *argv[]) {
 
     printf("%f\t%f\n",values_to_print[i],values[0]);
   }
-
+*/
   printf("Total time:\t %f s\n",duration);
   printf("Step  time:\t %f s\n",duration/steeps);
   printf("Time per sec:\t %f s\n",duration/(steeps*dt));

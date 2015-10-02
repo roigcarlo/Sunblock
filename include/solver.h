@@ -9,6 +9,7 @@
 #include "kernels.h"
 #include "interpolator.h"
 
+template<class Derived>
 class Solver {
 public:
 
@@ -21,7 +22,9 @@ public:
       pFlags(block->pFlags),
       rDx(block->rDx),
       rIdx(1.0f/block->rDx),
+      rI3dx(1.0f/(block->rDx*block->rDx*block->rDx)),
       rDt(Dt),
+      rIdt(1.0f/Dt),
       rPdt(Pdt),
       rRo(block->rRo),
       rMu(block->rMu),
@@ -235,12 +238,23 @@ public:
   }
 
   void Prepare() {
+    static_cast<Derived*>(this)->Prepare_impl();
   }
 
   void Finish() {
+    static_cast<Derived*>(this)->Finish_impl();
   }
 
   void Execute() {
+    static_cast<Derived*>(this)->Execute_impl();
+  }
+
+  void ExecuteBlock() {
+    static_cast<Derived*>(this)->ExecuteBlock_impl();
+  }
+
+  void ExecuteTask() {
+    static_cast<Derived*>(this)->ExecuteTask_impl();
   }
 
 protected:
@@ -253,7 +267,9 @@ protected:
 
   const PrecisionType & rDx;
   const PrecisionType rIdx;
+  const PrecisionType rI3dx;
   const PrecisionType & rDt;
+  const PrecisionType rIdt;
   const PrecisionType & rPdt;
 
   const PrecisionType & rRo;
