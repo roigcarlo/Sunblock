@@ -22,14 +22,22 @@ private:
       const size_t &cell,
       const size_t &Dim) {
 
+    PrecisionType m1 = 1.0f/26.0f * 1.0f;
+    PrecisionType m2 = 1.0f/26.0f * 2.0f;
+    PrecisionType m4 = 1.0f/26.0f * 4.0f;
+    PrecisionType m8 = 1.0f/26.0f * 8.0f;
+
     for (size_t d = 0; d < Dim; d++) {
       gridB[cell*Dim+d] = (
-        gridA[(cell - 1)*Dim+d]   +               // Left
-        gridA[(cell + 1)*Dim+d]   +               // Right
-        gridA[(cell - (rX+BW))*Dim+d]   +         // Up
-        gridA[(cell + (rX+BW))*Dim+d]   +         // Down
-        gridA[(cell - (rY+BW)*(rX+BW))*Dim+d] +   // Front
-        gridA[(cell + (rY+BW)*(rX+BW))*Dim+d]) / 1.0f/6.0f;
+        m8 * gridA[(cell    )*Dim+d]   +
+        m1 * gridA[(cell - 1)*Dim+d]   +               // Left
+        m1 * gridA[(cell + 1)*Dim+d]   +               // Right
+        m4 * gridA[(cell - (rY+BW)*(rX+BW))*Dim+d] +   // Front
+        m4 * gridA[(cell + (rY+BW)*(rX+BW))*Dim+d] +
+        m2 * gridA[(cell - (rY+BW)*(rX+BW) + 1)*Dim+d] +   // Front
+        m2 * gridA[(cell + (rY+BW)*(rX+BW) + 1)*Dim+d] +
+        m2 * gridA[(cell - (rY+BW)*(rX+BW) - 1)*Dim+d] +   // Front
+        m2 * gridA[(cell + (rY+BW)*(rX+BW) - 1)*Dim+d]);
     }
   }
 
@@ -46,8 +54,29 @@ private:
         gridA[(cell - (rX+BW))*Dim+d]   +             // Up
         gridA[(cell + (rX+BW))*Dim+d]   +             // Down
         gridA[(cell - (rY+BW)*(rX+BW))*Dim+d] +        // Front
-        gridA[(cell + (rY+BW)*(rX+BW))*Dim+d] -
-        6.0f * gridA[(cell)*Dim+d]) * rI3dx;
+        gridA[(cell + (rY+BW)*(rX+BW))*Dim+d] -        // Back
+        6.0f * gridA[(cell)*Dim+d]) * rIdx * rIdx;
+    }
+  }
+
+  inline void lapplacian2(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const size_t &cell,
+      const size_t &Dim) {
+
+    PrecisionType a = 0.9f;
+    PrecisionType b = (1.0f - a) / 6.0f;
+
+    for (size_t d = 0; d < Dim; d++) {
+      gridB[cell*Dim+d] = (
+        b * gridA[(cell - 1)*Dim+d]   +                  // Left
+        b * gridA[(cell + 1)*Dim+d]   +                  // Right
+        b * gridA[(cell - (rX+BW))*Dim+d]   +             // Up
+        b * gridA[(cell + (rX+BW))*Dim+d]   +             // Down
+        b * gridA[(cell - (rY+BW)*(rX+BW))*Dim+d] +        // Front
+        b * gridA[(cell + (rY+BW)*(rX+BW))*Dim+d] +        // Back
+        a * gridA[(cell)*Dim+d]);
     }
   }
 
@@ -85,7 +114,7 @@ private:
       (gridA[(cell + (rX+BW)) *rDim + 1] - gridA[(cell - (rX+BW)) * rDim + 1]) +
       (gridA[(cell + (rY+BW)*(rX+BW)) * rDim + 2] - gridA[(cell - (rY+BW)*(rX+BW)) * rDim + 2]);
 
-    gridB[cell] *= (0.5f * rIdx);
+    gridB[cell] *= 0.5f * rIdx;
   }
 
 public:
@@ -278,40 +307,39 @@ public:
     // PrecisionType force[3]    = {0.0f, 0.0f, -9.8f};
     PrecisionType force[3]    = {0.0f, 0.0f, 0.0f};
 
-    // size_t listL[rX*rX];
-    // size_t listR[rX*rX];
-    // size_t listF[rX*rX];
-    // size_t listB[rX*rX];
-    // size_t listT[rX*rX];
-    // size_t listD[rX*rX];
-    //
-    // size_t normalL[3] = {0,-1,0};
-    // size_t normalR[3] = {0,1,0};
-    // size_t normalF[3] = {-1,0,0};
-    // size_t normalB[3] = {1,0,0};
-    // size_t normalT[3] = {0,0,-1};
-    // size_t normalD[3] = {0,0,1};
-    //
-    // uint counter = 0;
+    size_t listL[rX*rX];
+    size_t listR[rX*rX];
+    size_t listF[rX*rX];
+    size_t listB[rX*rX];
+    size_t listT[rX*rX];
+    size_t listD[rX*rX];
 
-    // #pragma omp parallel for
-    // for(uint a = rBWP; a < rZ + rBWP; a++) {
-    //   for(uint b = rBWP; b < rY + rBWP; b++) {
-    //
-    //     listL[counter] = a*(rZ+rBW)*(rY+rBW)+2*(rZ+rBW)+b;
-    //     listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY-1)*(rZ+rBW)+b;
-    //     listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+2;
-    //     listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX-1);
-    //     listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
-    //     listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
-    //
-    //     counter++;
-    //   }
-    // }
+    size_t normalL[3] = {0,-1,0};
+    size_t normalR[3] = {0,1,0};
+    size_t normalF[3] = {-1,0,0};
+    size_t normalB[3] = {1,0,0};
+    size_t normalT[3] = {0,0,-1};
+    size_t normalD[3] = {0,0,1};
+
+    uint counter = 0;
+
+    for(uint a = rBWP; a < rZ + rBWP; a++) {
+      for(uint b = rBWP; b < rY + rBWP; b++) {
+
+        listL[counter] = a*(rZ+rBW)*(rY+rBW)+2*(rZ+rBW)+b;
+        listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY-1)*(rZ+rBW)+b;
+        listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+2;
+        listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX-1);
+        listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+        listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+
+        counter++;
+      }
+    }
 
     ///////////////////////////////////////////////////////////////////////////
     int bt = (rX + rBW);
-    int ss = 2;
+    int ss = 1;
     int slice = bt*bt;
     int slice3D = slice * 3;
 
@@ -335,6 +363,8 @@ public:
         }
       }
 
+      #pragma omp taskwait
+
       // Apply the pressure gradient
       for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
         #pragma omp task \
@@ -350,6 +380,8 @@ public:
         }
       }
 
+      #pragma omp taskwait
+
       // divergence of the gradient of the velocity
       for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
         #pragma omp task \
@@ -359,7 +391,7 @@ public:
           for(size_t j = rBWP; j < rY + rBWP; j++) {
             size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
             for(size_t i = rBWP; i < rX + rBWP; i++) {
-              lapplacian(vel,velLapp,cell++,3);
+              lapplacian(initVel,velLapp,cell++,3);
             }
           }
         }
@@ -379,22 +411,33 @@ public:
             size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
             for(size_t i = rBWP; i < rX + rBWP; i++) {
               if(!(pFlags[cell] & FIXED_VELOCITY_X))
-                initVel[cell*rDim+0] += (rMu * velLapp[cell*rDim+0] - pressGrad[cell*rDim+0] + force[0] / rRo - acc[cell*rDim+0]) * rDt;
+                initVel[cell*rDim+0] += ((rMu * velLapp[cell*rDim+0] / rRo) - (pressGrad[cell*rDim+0] / rRo) + (force[0] / rRo) - acc[cell*rDim+0]) * rDt;
               if(!(pFlags[cell] & FIXED_VELOCITY_Y))
-                initVel[cell*rDim+1] += (rMu * velLapp[cell*rDim+1] - pressGrad[cell*rDim+1] + force[1] / rRo - acc[cell*rDim+1]) * rDt;
+                initVel[cell*rDim+1] += ((rMu * velLapp[cell*rDim+1] / rRo) - (pressGrad[cell*rDim+1] / rRo) + (force[1] / rRo) - acc[cell*rDim+1]) * rDt;
               if(!(pFlags[cell] & FIXED_VELOCITY_Z))
-                initVel[cell*rDim+2] += (rMu * velLapp[cell*rDim+2] - pressGrad[cell*rDim+2] + force[2] / rRo - acc[cell*rDim+2]) * rDt;
+                initVel[cell*rDim+2] += ((rMu * velLapp[cell*rDim+2] / rRo) - (pressGrad[cell*rDim+2] / rRo) + (force[2] / rRo) - acc[cell*rDim+2]) * rDt;
               cell++;
             }
           }
         }
       }
 
+      #pragma omp taskwait
+
+      // applyBc(initVel,listL,rX*rX,normalL,1,3);
+      // applyBc(initVel,listR,rX*rX,normalR,1,3);
+      // applyBc(initVel,listT,rX*rX,normalT,1,3);
+      // applyBc(initVel,listB,rX*rX,normalB,1,3);
+      // applyBc(initVel,listF,rX*rX,normalF,1,3);
+      // applyBc(initVel,listD,rX*rX,normalD,1,3);
+
+      #pragma omp taskwait
+
       // Combine it all together and store it back in A
       for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
         #pragma omp task \
           depend(in:initVel[(kk)*slice3D:ss*slice3D]) \
-          depend(out:velDiv[(kk)*slice:ss*slice])
+          depend(out:pressDiff[(kk)*slice:ss*slice])
         for(size_t k = kk; k < kk+ss; k++) {
           for(size_t j = rBWP; j < rY + rBWP; j++) {
             size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
@@ -407,6 +450,17 @@ public:
         }
       }
 
+      #pragma omp taskwait
+
+      // applyBc(pressDiff,listL,rX*rX,normalL,1,1);
+      // applyBc(pressDiff,listR,rX*rX,normalR,1,1);
+      // applyBc(pressDiff,listT,rX*rX,normalT,1,1);
+      // applyBc(pressDiff,listB,rX*rX,normalB,1,1);
+      // applyBc(pressDiff,listF,rX*rX,normalF,1,1);
+      // applyBc(pressDiff,listD,rX*rX,normalD,1,1);
+
+      // #pragma omp taskwait
+      //
       // Combine it all together and store it back in A
       for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
         #pragma omp task \
@@ -416,14 +470,17 @@ public:
           for(size_t j = rBWP; j < rY + rBWP; j++) {
             size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
             for(size_t i = rBWP; i < rX + rBWP; i++) {
-              smoothing(pressDiff,pressLapp,cell,1);
+              smoothing(velDiv,pressLapp,cell,1);
+              pressDiff[cell] = pressDiff[cell] * 0.1f + 0.9f*-rRo*rCC2*rDt * pressLapp[cell];
               cell++;
             }
           }
         }
       }
 
-      PrecisionType lapp_fact = ( rDt / rRo ) * 1.0f;
+      #pragma omp taskwait
+
+      PrecisionType lapp_fact = (rDt) / rRo;
 
       // Combine it all together and store it back in A
       for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
@@ -436,26 +493,43 @@ public:
             size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
             for(size_t i = rBWP; i < rX + rBWP; i++) {
               if(!(pFlags[cell] & FIXED_PRESSURE))
-                press[cell] += pressDiff[cell] + pressLapp[cell] * lapp_fact;
+                press[cell] += pressDiff[cell];
               cell++;
             }
           }
         }
       }
 
+      // // Combine it all together and store it back in A
+      // for(size_t kk = rBWP; kk < rZ + rBWP; kk+=ss) {
+      //   #pragma omp task \
+      //     depend(in:pressDiff[(kk)*slice:ss*slice]) \
+      //     depend(out:pressLapp[(kk)*slice:ss*slice])
+      //   for(size_t k = kk; k < kk+ss; k++) {
+      //     for(size_t j = rBWP; j < rY + rBWP; j++) {
+      //       size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+      //       for(size_t i = rBWP; i < rX + rBWP; i++) {
+      //         smoothing(pressLapp,press,cell,1);
+      //         cell++;
+      //       }
+      //     }
+      //   }
+      // }
+
     }
 
     #pragma omp taskwait
 
-    // applyBc(press,listL,rX*rX,normalL,1,1);
-    // applyBc(press,listR,rX*rX,normalR,1,1);
+    applyBc(press,listL,rX*rX,normalL,1,1);
+    applyBc(press,listR,rX*rX,normalR,1,1);
+    // applyBc(press,listT,rX*rX,normalT,1,1);
+    // applyBc(press,listB,rX*rX,normalB,1,1);
+    // applyBc(press,listF,rX*rX,normalF,1,1);
+    // applyBc(press,listD,rX*rX,normalD,1,1);
     // applyBc(press,listF,rX*rX,normalF,1,1);
     // applyBc(press,listB,rX*rX,normalB,1,1);
 
     // copyUpToDown(initVel,3);
-
-    // applyBc(initVel,listT,rX*rX,normalT,1,3);
-    // applyBc(initVel,listD,rX*rX,normalD,1,3);
 
   }
 

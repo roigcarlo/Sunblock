@@ -36,6 +36,10 @@ public:
 
     uint pi,pj,pk,ni,nj,nk;
 
+    for(int i = 0; i < Dim; i++) {
+      Coords[i] = Coords[i] < 0.0f ? 0.0f : Coords[i] > 1.0f ? 1.0f : Coords[i];
+    }
+
     Utils::GlobalToLocal(Coords,block->rIdx,Dim);
 
     pi = (uint)(Coords[0]); ni = pi+1;

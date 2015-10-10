@@ -57,32 +57,32 @@ public:
       }
     }
 
-    applyBc(aux_3d_0,listT,rX*rX,normalT,1,3);
-    applyBc(aux_3d_0,listD,rX*rX,normalD,1,3);
+    applyBc(aux_3d_0,listL,rX*rX,normalL,1,3);
+    applyBc(aux_3d_0,listR,rX*rX,normalR,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          ApplyForth(aux_3d_1,aux_3d_0,aux_3d_0,i,j,k);
+          ApplyBack(aux_3d_1,aux_3d_0,aux_3d_0,i,j,k);
         }
       }
     }
 
-    applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
-    applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
+    applyBc(aux_3d_1,listL,rX*rX,normalL,1,3);
+    applyBc(aux_3d_1,listR,rX*rX,normalR,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
       for(size_t j = rBWP; j < rY + rBWP; j++) {
         for(size_t i = rBWP; i < rX + rBWP; i++) {
-          ApplyBack(aux_3d_3,aux_3d_1,aux_3d_0,i,j,k);
+          ApplyForth(aux_3d_3,aux_3d_1,aux_3d_0,i,j,k);
         }
       }
     }
 
-    applyBc(aux_3d_3,listT,rX*rX,normalT,1,3);
-    applyBc(aux_3d_3,listD,rX*rX,normalD,1,3);
+    applyBc(aux_3d_3,listL,rX*rX,normalL,1,3);
+    applyBc(aux_3d_3,listR,rX*rX,normalR,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
@@ -93,8 +93,8 @@ public:
       }
     }
 
-    applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
-    applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
+    applyBc(aux_3d_1,listL,rX*rX,normalL,1,3);
+    applyBc(aux_3d_1,listR,rX*rX,normalR,1,3);
 
   }
 
@@ -106,7 +106,7 @@ public:
     #define BOT(_i_) std::max(rBWP,(_i_ * rNE))
     #define TOP(_i_) rBWP + std::min(rNE*rNB-rBWP,((_i_+1) * rNE))
 
-    PrecisionType * aux_3d_0 = pBuffers[AUX_3D_0];
+    PrecisionType * aux_3d_0 = pBuffers[VELOCITY];
     PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
     PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
 
@@ -163,7 +163,7 @@ public:
           for(size_t k = kk; k < kk+ss; k++) {
             for(size_t j = rBWP; j < rY + rBWP; j++) {
               for(size_t i = rBWP; i < rX + rBWP; i++) {
-                ApplyEcc(aux_3d_0,aux_3d_3,i,j,k);
+                ApplyEcc(aux_3d_1,aux_3d_3,i,j,k);
               }
             }
           }
@@ -187,7 +187,7 @@ public:
     #define BOT(_i_) std::max(rBWP,(_i_ * rNE))
     #define TOP(_i_) rBWP + std::min(rNE*rNB-rBWP,((_i_+1) * rNE))
 
-    PrecisionType * aux_3d_0 = pBuffers[AUX_3D_0];
+    PrecisionType * aux_3d_0 = pBuffers[VELOCITY];
     PrecisionType * aux_3d_1 = pBuffers[AUX_3D_1];
     PrecisionType * aux_3d_3 = pBuffers[AUX_3D_3];
 
@@ -228,7 +228,7 @@ public:
           for(size_t k = BOT(kk); k < TOP(kk); k++) {
             for(size_t j = BOT(jj); j < TOP(jj); j++) {
               for(size_t i = BOT(ii); i < TOP(ii); i++) {
-                ApplyEcc(aux_3d_0,aux_3d_3,i,j,k);
+                ApplyEcc(aux_3d_1,aux_3d_3,i,j,k);
               }
             }
           }
@@ -276,6 +276,13 @@ public:
     Phi[cell*rDim+0] = iPhi[0];
     Phi[cell*rDim+1] = iPhi[1];
     Phi[cell*rDim+2] = iPhi[2];
+
+    // for(size_t d = 0; d < 3; d++) {
+    //   if(Phi[cell*rDim+d] > 1.0f) {
+    //     printf("%f -*- %f -*- %f\n",Phi[cell*rDim+d],displacement[d],PhiAuxB[cell*rDim+d]);
+    //     abort();
+    //   }
+    // }
   }
 
   void ApplyForth(

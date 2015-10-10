@@ -17,7 +17,7 @@
 #include "include/interpolator.h"
 
 #define WRITE_INIT_R(_STEP_)                                                        \
-io.WriteGidMeshBin(dx,N,N,N);                                                          \
+io.WriteGidMeshBin(dx,N,N,N);                                                       \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,0,Dim,"AUX_3D_0");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_1");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,0,Dim,"velLappl");  \
@@ -29,8 +29,8 @@ io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_7],N,N,N,0    ,"PresLapp"
 io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,0,Dim,"velocity");  \
 io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,0    ,"pressure");  \
 
-#define WRITE_RESULT(_STEP_)                                          \
-if (!(i%frec)) {                                                \
+#define WRITE_RESULT(_STEP_)                                                            \
+if (!(i%frec)) {                                                                        \
   io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,i+1,Dim,"AUX_3D_0");  \
   io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,i+1,Dim,"AUX_3D_1");  \
   io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,i+1,Dim,"velLappl");  \
@@ -41,9 +41,9 @@ if (!(i%frec)) {                                                \
   io.WriteGidResultsBin1D((PrecisionType*)buffers[AUX_3D_7],N,N,N,i+1    ,"PresLapp");  \
   io.WriteGidResultsBin3D((PrecisionType*)buffers[VELOCITY],N,N,N,i+1,Dim,"velocity");  \
   io.WriteGidResultsBin1D((PrecisionType*)buffers[PRESSURE],N,N,N,i+1    ,"pressure");  \
-  OutputStep = _STEP_;                                                \
-}                                                                     \
-OutputStep--;                                                         \
+  OutputStep = _STEP_;                                                                  \
+}                                                                                       \
+OutputStep--;                                                                           \
 
 PrecisionType calculateMaxDt_CFL(PrecisionType CFL, PrecisionType h, PrecisionType maxv) {
   return CFL*h / maxv;
@@ -73,13 +73,13 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = 1;//steeps;
+  uint frec       = steeps/10;
 
-  PrecisionType h        = atoi(argv[3]);
+  PrecisionType h        = atof(argv[3]);
   PrecisionType omega    = 1.0f;
   PrecisionType maxv     = 0.0f;
   PrecisionType oldmaxv  = 0.0f;
-  PrecisionType CFL      = 0.8f;
+  PrecisionType CFL      = 0.5f;
 
   PrecisionType dx       = h/(PrecisionType)N;
   PrecisionType dt       = 0.1f;
@@ -87,9 +87,10 @@ int main(int argc, char *argv[]) {
 
   // air
   PrecisionType ro       = 1.0f;
-  PrecisionType mu       = 1.93e-3;
+  PrecisionType mu       = 1.9e-5;
   PrecisionType ka       = 1.0e-5f;
-  PrecisionType cc2      = 343.2f*343.2f;
+  PrecisionType cc       = 1.0f;
+  PrecisionType cc2      = cc * cc;
 
   // water
   // PrecisionType ro       = 998.207f;
@@ -169,12 +170,13 @@ int main(int argc, char *argv[]) {
   printf("InitializeVelocity\n");
   block->InitializePressure();
   printf("InitializePressure\n");
-  block->WriteHeatFocus();
+  // block->WriteHeatFocus();
   printf("WriteHeatFocus\n");
 
   block->calculateMaxVelocity(maxv);
-  dt = 0.05;// calculateMaxDt_CFL(CFL,dx,maxv);
-  // dt = 0.8f * 1.0f/(cc2*ro);
+  dt = calculateMaxDt_CFL(CFL,dx,maxv);
+  dt = 1.0f * std::min((h/N)/cc,(h/N)/maxv);
+  // dt = calculateMaxDt_CFL(CFL,dx,maxv);
 
   printf(
     "Calculated dt: %f -- %f, %f, %f \n",
@@ -212,22 +214,28 @@ int main(int argc, char *argv[]) {
 
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
-    dt = 0.05;//calculateMaxDt_CFL(CFL,dx,maxv);
-    // dt = 0.8f * 1.0f/(cc2*ro);
+    dt = calculateMaxDt_CFL(CFL,dx,maxv);
+    dt = 1.0f * 1.0f/(cc2*ro);
+    dt = 1.0f * std::min((h/N)/cc,(h/N)/maxv);
+    // dt = calculateMaxDt_CFL(CFL,dx,maxv);
+
+
+    if (!(i%10000))
+      printf("Step: %d\n",i);
 
     if (!(i%frec))
     printf(
       "Step %d: %f -- Seconds: %f, %f, MAXV: %f, [%f,%f] \n",
       i,
-      calculateMaxDt_CFL(CFL, dx, maxv),
+      dt,
       dt * i,
       (PrecisionType)h/(PrecisionType)N,
-      intergale*10000.0f,
+      intergale,
       (1.0f/64.0f)/dt,
       (maxv-oldmaxv));
 
-    AdvectionSolver.ExecuteTask();
-    // DiffusionSolver.ExecuteTask();
+    AdvectionSolver.Execute();
+    DiffusionSolver.ExecuteTask();
 
     WRITE_RESULT(frec)
   }

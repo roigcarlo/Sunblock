@@ -1,6 +1,8 @@
 #ifndef BLOCK_H
 #define BLOCK_H
 
+#include <limits>
+
 #include "defines.h"
 #include "utils.h"
 
@@ -58,6 +60,8 @@ public:
     mPaddE = (rZ+rBW)*(rY+rBW) + 1;
     mPaddF = (rZ+rBW)*(rY+rBW) + (rY+rBW);
     mPaddG = (rZ+rBW)*(rY+rBW) + (rY+rBW) + 1;
+
+    printf("RIDX: %f\n",rIdx);
   }
 
   ~Block() {}
@@ -104,17 +108,17 @@ public:
       }
     }
 
-    int update_size = 1;
-    // int toUpdate[update_size] = {VELOCITY,AUX_3D_0,AUX_3D_1,AUX_3D_2};
-    int toUpdate[update_size] = {VELOCITY};
+    int update_size = 4;
+    int toUpdate[update_size] = {VELOCITY,AUX_3D_0,AUX_3D_1,AUX_3D_2};
+    // int toUpdate[update_size] = {VELOCITY};
 
     #pragma omp parallel for
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
           for(size_t b = 0; b < update_size; b++ ) {
-            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = -rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
-            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] =  rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f;//-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f;// rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
             pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
           }
         }
@@ -126,30 +130,30 @@ public:
     //     for(size_t i = 2; i < rX + rBW - 2; i++ )
     //       pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
 
-    // #pragma omp parallel for
-    // for(size_t a = 1; a < rY + rBW - 1; a++)
-    //   for(size_t b = 2; b < rX + rBW - 1; b++)
-    //     pBuffers[VELOCITY][IndexType::GetIndex(a,b,rZ,mPaddY,mPaddZ)*rDim+0] = -1.0f;
+    #pragma omp parallel for
+    for(size_t a = 1; a < rY + rBW - 1; a++)
+      for(size_t b = 2; b < rX + rBW - 1; b++)
+        pBuffers[VELOCITY][IndexType::GetIndex(a,b,1,mPaddY,mPaddZ)*rDim+0] = 0.0190f;
 
-    // #pragma omp parallel for
-    // for(size_t jk = 0; jk < rY + rBW; jk++) {
-    //   for(size_t i = 0; i < rX + rBW; i++ ) {
-    //     for(size_t b = 0; b < update_size; b++ ) {
-    //       pBuffers[toUpdate[b]][IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-    //       pBuffers[toUpdate[b]][IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-    //     }
-    //   }
-    // }
+    #pragma omp parallel for
+    for(size_t jk = 0; jk < rY + rBW; jk++) {
+      for(size_t i = 0; i < rX + rBW; i++ ) {
+        for(size_t b = 0; b < update_size; b++ ) {
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,0,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,jk,0,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+        }
+      }
+    }
 
-    // #pragma omp parallel for
-    // for(size_t jk = 0; jk < rY + rBW; jk++) {
-    //   for(size_t i = 0; i < rX + rBW; i++ ) {
-    //     for(size_t b = 0; b < update_size; b++ ) {
-    //       pBuffers[toUpdate[b]][IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-    //       pBuffers[toUpdate[b]][IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
-    //     }
-    //   }
-    // }
+    #pragma omp parallel for
+    for(size_t jk = 0; jk < rY + rBW; jk++) {
+      for(size_t i = 0; i < rX + rBW; i++ ) {
+        for(size_t b = 0; b < update_size; b++ ) {
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,rY+rBW-1,jk,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+          pBuffers[toUpdate[b]][IndexType::GetIndex(i,jk,rY+rBW-1,mPaddY,mPaddZ)*rDim+0] = 0.0f;
+        }
+      }
+    }
 
   }
 
@@ -157,7 +161,7 @@ public:
 
     maxv = 1.0f;
 
-    #pragma omp parallel for reduction(+:maxv)
+    #pragma omp parallel for reduction(max:maxv)
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
@@ -172,9 +176,9 @@ public:
 
   void calculateRealMaxVelocity(PrecisionType &maxv) {
 
-    maxv = -1.0f;
+    maxv = -std::numeric_limits<double>::max();
 
-    #pragma omp parallel for reduction(+:maxv)
+    #pragma omp parallel for reduction(max:maxv)
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
@@ -184,7 +188,6 @@ public:
         }
       }
     }
-
   }
 
   void WriteHeatFocus() {
@@ -210,7 +213,7 @@ public:
 
           if(d2 < rr) {
             for(size_t d = 0; d < rDim; d++) {
-              pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = (1.0f - d2/rr);
+              pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = -(1.0f - d2/rr);
             }
           }
         }

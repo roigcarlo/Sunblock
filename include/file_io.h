@@ -365,6 +365,7 @@ public:
       }
     }
     GiD_EndResult();
+    GiD_FlushPostFile();
   }
 
   /**
@@ -410,6 +411,7 @@ public:
       }
     }
     GiD_EndResult();
+    GiD_FlushPostFile();
   }
 
 };
