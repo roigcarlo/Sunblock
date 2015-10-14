@@ -9,31 +9,55 @@
 #include <errno.h>
 #include <math.h>
 
-
 #ifdef _WIN32
-typedef unsigned int uint;
+typedef __uint64_t uint;
 #endif
 
-#define FETCHTIME ((end.tv_sec  - start.tv_sec) * 1000000u + end.tv_usec - start.tv_usec) / 1.e6;
+#define FETCHTIME(STR,END) \
+(double)((END.tv_sec  - STR.tv_sec) * 1000000u + END.tv_usec - STR.tv_usec) / 1.e6;
 
-#ifdef USE_NOVEC
-  typedef double  VariableType;
-  const uint BW            = 2;        //  Boundary width   ( needed if we want to use SIMD )
+#ifndef USE_DOUBLE
+  #ifndef USE_FLOAT
+    typedef double  PrecisionType;
+    const size_t BW        = 2;        //  Boundary width
+  #endif
 #endif
 
 #ifdef USE_DOUBLE
-  typedef double  VariableType;
-  const uint BW            = 8;        //  Boundary width   ( needed if we want to use SIMD )
+  typedef double  PrecisionType;
+  const size_t BW          = 8;        //  Boundary width
 #endif
 
 #ifdef USE_FLOAT
-  typedef float  VariableType;
-  const uint BW            = 16;       //  Boundary width   ( needed if we want to use SIMD )
+  typedef float  PrecisionType;
+  const size_t BW          = 16;       //  Boundary width
 #endif
 
-const uint BWP             = BW / 2;   //  Boundary padding ( needed if we want to use SIMD )
-const VariableType ONESIX = 1.0/6.0;  //  1/6
+const size_t MAX_DIM       = 3;
+const size_t BWP           = BW / 2;   //  Boundary padding
+const PrecisionType ONESIX = 1.0/6.0;
 
-typedef VariableType Variable3DType[3];
+#define DIMENSION(A) sizeof(A)/sizeof(PrecisionType)
+
+enum Flag {
+  FIXED_VELOCITY_X = 0x000001,
+  FIXED_VELOCITY_Y = 0x000010,
+  FIXED_VELOCITY_Z = 0x000100,
+  FIXED_PRESSURE   = 0x001000
+};
+
+enum Buffers {
+  VELOCITY,
+  PRESSURE,
+  AUX_3D_0,
+  AUX_3D_1,
+  AUX_3D_2,
+  AUX_3D_3,
+  AUX_3D_4,
+  AUX_3D_5,
+  AUX_3D_6,
+  AUX_3D_7,
+  MAX_BUFF
+};
 
 #endif
