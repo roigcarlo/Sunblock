@@ -1,7 +1,7 @@
 #ifndef SIMD_H
 #define SIMD_H
 
-#include "defines.h"
+#include "defines.hpp"
 
 #ifdef USE_NOVEC
     #define VEC_ERROR \
@@ -11,7 +11,7 @@
     #define VP    1
     #define VADD(A,B)             (A) + (B)
     #define VMUL(A,B)             (A) * (B)
-    #define VLOAD( A)             (A[0]) 
+    #define VLOAD( A)             (A[0])
     #define VSTORE(A,B)           (A[0]) = B
     #define VFMA(A,B,C)           (((A) * (B)) + (C))
 
@@ -24,7 +24,7 @@
     #define VP    2
     #define VADD(A,B)             _mm_add_pd((A),(B))
     #define VMUL(A,B)             _mm_mul_pd((A),(B))
-    #define VLOAD( A)             _mm_load_pd((A)) 
+    #define VLOAD( A)             _mm_load_pd((A))
     #define VSTORE(A,B)           _mm_store_pd((A),(B))
     #define VFMA(A,B,C)           _mm128_fmadd_pd((A),(B),(C))
 
@@ -37,7 +37,7 @@
     #define VP    4
     #define VADD(A,B)             _mm_add_ps((A),(B))
     #define VMUL(A,B)             _mm_mul_ps((A),(B))
-    #define VLOAD( A)             _mm_load_ps((A)) 
+    #define VLOAD( A)             _mm_load_ps((A))
     #define VSTORE(A,B)           _mm_store_ps((A),(B))
     #define VFMA(A,B,C)           _mm128_fmadd_ps((A),(B),(C))
 
@@ -51,7 +51,7 @@
     #define VP    4
     #define VADD(A,B)             _mm256_add_pd((A),(B))
     #define VMUL(A,B)             _mm256_mul_pd((A),(B))
-    #define VLOAD( A)             _mm256_load_pd((A)) 
+    #define VLOAD( A)             _mm256_load_pd((A))
     #define VSTORE(A,B)           _mm256_store_pd((A),(B))
     #define VFMA(A,B,C)           _mm256_fmadd_pd((A),(B),(C))
 
@@ -64,7 +64,7 @@
     #define VP    8
     #define VADD(A,B)             _mm256_add_ps((A),(B))
     #define VMUL(A,B)             _mm256_mul_ps((A),(B))
-    #define VLOAD( A)             _mm256_load_ps((A)) 
+    #define VLOAD( A)             _mm256_load_ps((A))
     #define VSTORE(A,B)           _mm256_store_ps((A),(B))
     #define VFMA(A,B,C)           _mm256_fmadd_ps((A),(B),(C))
 

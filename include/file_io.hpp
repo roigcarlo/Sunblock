@@ -243,9 +243,9 @@ public:
         for(size_t i = 0; i < X + BW; i++) {
           GiD_WriteCoordinates(
             (int)cell++,
-            (PrecisionType)i*Dx,
-            (PrecisionType)j*Dx,
-            (PrecisionType)k*Dx
+            (PrecisionType)1.0f-i*Dx,
+            (PrecisionType)1.0f-j*Dx,
+            (PrecisionType)1.0f-k*Dx
           );
         }
       }

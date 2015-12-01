@@ -2,6 +2,7 @@
 #define DEFINES_H
 
 #include <algorithm>
+#include <cstddef>
 
 #include <malloc.h>
 #include <stdlib.h>
@@ -43,7 +44,8 @@ enum Flag {
   FIXED_VELOCITY_X = 0x000001,
   FIXED_VELOCITY_Y = 0x000010,
   FIXED_VELOCITY_Z = 0x000100,
-  FIXED_PRESSURE   = 0x001000
+  FIXED_PRESSURE   = 0x001000,
+  OUT_OF_BOUNDS    = 0x010000
 };
 
 enum Buffers {

@@ -8,16 +8,16 @@
 #include <omp.h>
 
 // Solver
-#include "include/utils.h"
-#include "include/block.h"
-#include "include/defines.h"
-#include "include/solver_stencil.h"
-#include "include/solver_bfecc.h"
-#include "include/file_io.h"
-#include "include/interpolator.h"
+#include "include/utils.hpp"
+#include "include/block.hpp"
+#include "include/defines.hpp"
+#include "include/solver_stencil.hpp"
+#include "include/solver_bfecc.hpp"
+#include "include/file_io.hpp"
+#include "include/interpolator.hpp"
 
 #define WRITE_INIT_R(_STEP_)                                                        \
-io.WriteGidMeshBin(dx,N,N,N);                                                       \
+io.WriteGidMeshWithSkinBin(dx,N,N,N);                                                       \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,0,Dim,"AUX_3D_0");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_1");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,0,Dim,"velLappl");  \
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
   size_t NE       = (N+BW)/NB;
   uint OutputStep = 0;
   size_t Dim      = 3;
-  uint frec       = steeps/10;
+  uint frec       = atoi(argv[5]); //steeps/10;
 
   PrecisionType h        = atof(argv[3]);
   PrecisionType omega    = 1.0f;
@@ -146,12 +146,12 @@ int main(int argc, char *argv[]) {
       flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
       flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
 
-      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
+      // // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
+      // // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
 
-      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
     }
   }
 
@@ -170,12 +170,12 @@ int main(int argc, char *argv[]) {
   printf("InitializeVelocity\n");
   block->InitializePressure();
   printf("InitializePressure\n");
-  // block->WriteHeatFocus();
+  block->WriteHeatFocus();
   printf("WriteHeatFocus\n");
 
   block->calculateMaxVelocity(maxv);
-  dt = calculateMaxDt_CFL(CFL,dx,maxv);
-  dt = 1.0f * std::min((h/N)/cc,(h/N)/maxv);
+  dt = 0.05f;// calculateMaxDt_CFL(CFL,dx,maxv);
+  dt = 0.8f * std::min((h/N)/cc,(h/N)/maxv);
   // dt = calculateMaxDt_CFL(CFL,dx,maxv);
 
   printf(
@@ -214,9 +214,9 @@ int main(int argc, char *argv[]) {
 
     oldmaxv = maxv;
     block->calculateMaxVelocity(maxv);
-    dt = calculateMaxDt_CFL(CFL,dx,maxv);
-    dt = 1.0f * 1.0f/(cc2*ro);
-    dt = 1.0f * std::min((h/N)/cc,(h/N)/maxv);
+    // dt = 0.05f;// calculateMaxDt_CFL(CFL,dx,maxv);
+    // dt = 1.0f * 1.0f/(cc2*ro);
+    // dt = 0.8f * std::min((h/N)/cc,(h/N)/maxv);
     // dt = calculateMaxDt_CFL(CFL,dx,maxv);
 
 
@@ -234,7 +234,7 @@ int main(int argc, char *argv[]) {
       (1.0f/64.0f)/dt,
       (maxv-oldmaxv));
 
-    AdvectionSolver.Execute();
+    AdvectionSolver.ExecuteTask();
     DiffusionSolver.ExecuteTask();
 
     WRITE_RESULT(frec)

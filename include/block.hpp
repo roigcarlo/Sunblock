@@ -2,9 +2,10 @@
 #define BLOCK_H
 
 #include <limits>
+#include <cmath>
 
-#include "defines.h"
-#include "utils.h"
+#include "defines.hpp"
+#include "utils.hpp"
 
 class Block {
 public:
@@ -108,8 +109,8 @@ public:
       }
     }
 
-    int update_size = 4;
-    int toUpdate[update_size] = {VELOCITY,AUX_3D_0,AUX_3D_1,AUX_3D_2};
+    size_t update_size = 4;
+    size_t toUpdate[update_size] = {VELOCITY,AUX_3D_0,AUX_3D_1,AUX_3D_2};
     // int toUpdate[update_size] = {VELOCITY};
 
     #pragma omp parallel for
@@ -117,8 +118,8 @@ public:
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
           for(size_t b = 0; b < update_size; b++ ) {
-            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f;//-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
-            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f;// rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0] = 0.0f; //-rOmega * (PrecisionType)(j-(rY+1.0)/2.0) * rDx;
+            pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1] = 0.0f; // rOmega * (PrecisionType)(i-(rX+1.0)/2.0) * rDx;
             pBuffers[toUpdate[b]][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2] = 0.0f;
           }
         }
@@ -133,7 +134,7 @@ public:
     #pragma omp parallel for
     for(size_t a = 1; a < rY + rBW - 1; a++)
       for(size_t b = 2; b < rX + rBW - 1; b++)
-        pBuffers[VELOCITY][IndexType::GetIndex(a,b,1,mPaddY,mPaddZ)*rDim+0] = 0.0190f;
+        pBuffers[VELOCITY][IndexType::GetIndex(a,b,1,mPaddY,mPaddZ)*rDim+0] = 0.0f;//0.0190f;
 
     #pragma omp parallel for
     for(size_t jk = 0; jk < rY + rBW; jk++) {
@@ -165,9 +166,9 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
-          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
-          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
-          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
+          maxv = std::max((PrecisionType)std::abs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((PrecisionType)std::abs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          maxv = std::max((PrecisionType)std::abs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
         }
       }
     }
@@ -182,9 +183,9 @@ public:
     for(size_t k = 0; k < rZ + rBW; k++) {
       for(size_t j = 0; j < rY + rBW; j++) {
         for(size_t i = 0; i < rX + rBW; i++ ) {
-          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
-          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
-          maxv = std::max((PrecisionType)fabs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
+          maxv = std::max((PrecisionType)std::abs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+0]),maxv);
+          maxv = std::max((PrecisionType)std::abs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+1]),maxv);
+          maxv = std::max((PrecisionType)std::abs(pBuffers[VELOCITY][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+2]),maxv);
         }
       }
     }
@@ -211,9 +212,13 @@ public:
           PrecisionType rr =
             pow((PrecisionType)rX/8.0,2.0f);
 
+          for(size_t d = 0; d < rDim; d++) {
+            pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 0.0f;
+          }
+
           if(d2 < rr) {
             for(size_t d = 0; d < rDim; d++) {
-              pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = -(1.0f - d2/rr);
+              pBuffers[AUX_3D_0][IndexType::GetIndex(i,j,k,mPaddY,mPaddZ)*rDim+d] = 1.0f-d2/rr;
             }
           }
         }

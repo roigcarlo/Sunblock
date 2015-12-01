@@ -50,15 +50,15 @@ public:
         listR[counter] = a*(rZ+rBW)*(rY+rBW)+(rY-1)*(rZ+rBW)+b;
         listF[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+2;
         listB[counter] = a*(rZ+rBW)*(rY+rBW)+b*(rZ+rBW)+(rX-1);
-        listT[counter] = 1*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
-        listD[counter] = rZ*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+        listT[counter] = 2*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
+        listD[counter] = (rZ-1)*(rZ+rBW)*(rY+rBW)+a*(rZ+rBW)+b;
 
         counter++;
       }
     }
 
-    applyBc(aux_3d_0,listL,rX*rX,normalL,1,3);
-    applyBc(aux_3d_0,listR,rX*rX,normalR,1,3);
+    // applyBc(aux_3d_0,listT,rX*rX,normalT,1,3);
+    // applyBc(aux_3d_0,listD,rX*rX,normalD,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
@@ -69,8 +69,8 @@ public:
       }
     }
 
-    applyBc(aux_3d_1,listL,rX*rX,normalL,1,3);
-    applyBc(aux_3d_1,listR,rX*rX,normalR,1,3);
+    // applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
+    // applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
@@ -81,8 +81,8 @@ public:
       }
     }
 
-    applyBc(aux_3d_3,listL,rX*rX,normalL,1,3);
-    applyBc(aux_3d_3,listR,rX*rX,normalR,1,3);
+    // applyBc(aux_3d_3,listT,rX*rX,normalT,1,3);
+    // applyBc(aux_3d_3,listD,rX*rX,normalD,1,3);
 
     #pragma omp parallel for
     for(size_t k = rBWP; k < rZ + rBWP; k++) {
@@ -93,8 +93,8 @@ public:
       }
     }
 
-    applyBc(aux_3d_1,listL,rX*rX,normalL,1,3);
-    applyBc(aux_3d_1,listR,rX*rX,normalR,1,3);
+    // applyBc(aux_3d_1,listT,rX*rX,normalT,1,3);
+    // applyBc(aux_3d_1,listD,rX*rX,normalD,1,3);
 
   }
 
@@ -269,20 +269,21 @@ public:
 
     for(size_t d = 0; d < 3; d++) {
       displacement[d] = origin[d] - pBuffers[VELOCITY][cell*rDim+d] * rDt;
+      if(displacement[d] < 0 || displacement[d] > rX) {
+        pFlags[cell] != OUT_OF_BOUNDS;
+      }
     }
 
-    InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);
+    if(!(pFlags[cell] &= OUT_OF_BOUNDS)) {
+      InterpolateType::Interpolate(pBlock,PhiAuxB,(PrecisionType*)iPhi,displacement,rDim);
 
-    Phi[cell*rDim+0] = iPhi[0];
-    Phi[cell*rDim+1] = iPhi[1];
-    Phi[cell*rDim+2] = iPhi[2];
-
-    // for(size_t d = 0; d < 3; d++) {
-    //   if(Phi[cell*rDim+d] > 1.0f) {
-    //     printf("%f -*- %f -*- %f\n",Phi[cell*rDim+d],displacement[d],PhiAuxB[cell*rDim+d]);
-    //     abort();
-    //   }
-    // }
+      if(!(pFlags[cell] & FIXED_VELOCITY_X))
+        Phi[cell*rDim+0] = iPhi[0];
+      if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+        Phi[cell*rDim+1] = iPhi[1];
+      if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+        Phi[cell*rDim+2] = iPhi[2];
+    }
   }
 
   void ApplyForth(
@@ -305,13 +306,21 @@ public:
 
     for(size_t d = 0; d < 3; d++) {
       displacement[d] = origin[d] + pBuffers[VELOCITY][cell*rDim+d] * rDt;
+      if(displacement[d] < 0 || displacement[d] > rX) {
+        pFlags[cell] != OUT_OF_BOUNDS;
+      }
     }
 
-    InterpolateType::Interpolate(pBlock,PhiAuxA,(PrecisionType*)iPhi,displacement,rDim);
+    if(!(pFlags[cell] &= OUT_OF_BOUNDS)) {
+      InterpolateType::Interpolate(pBlock,PhiAuxA,(PrecisionType*)iPhi,displacement,rDim);
 
-    Phi[cell*rDim+0] = 1.5f * PhiAuxB[cell*rDim+0] - 0.5f * iPhi[0];
-    Phi[cell*rDim+1] = 1.5f * PhiAuxB[cell*rDim+1] - 0.5f * iPhi[1];
-    Phi[cell*rDim+2] = 1.5f * PhiAuxB[cell*rDim+2] - 0.5f * iPhi[2];
+      if(!(pFlags[cell] & FIXED_VELOCITY_X))
+        Phi[cell*rDim+0] = 1.5f * PhiAuxB[cell*rDim+0] - 0.5f * iPhi[0];
+      if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+        Phi[cell*rDim+1] = 1.5f * PhiAuxB[cell*rDim+1] - 0.5f * iPhi[1];
+      if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+        Phi[cell*rDim+2] = 1.5f * PhiAuxB[cell*rDim+2] - 0.5f * iPhi[2];
+    }
   }
 
   void ApplyEcc(
@@ -333,12 +342,24 @@ public:
 
     for(size_t d = 0; d < 3; d++) {
       displacement[d] = origin[d] - pBuffers[VELOCITY][cell*rDim+d] * rDt;
+      if(displacement[d] < 0 || displacement[d] > rX) {
+        pFlags[cell] != OUT_OF_BOUNDS;
+      }
     }
 
-    InterpolateType::Interpolate(pBlock,PhiAuxA,(PrecisionType*)iPhi,displacement,rDim);
+    if(!(pFlags[cell] &= OUT_OF_BOUNDS)) {
+      InterpolateType::Interpolate(pBlock,PhiAuxA,(PrecisionType*)iPhi,displacement,rDim);
 
-    Phi[cell*rDim+0] = iPhi[0];
-    Phi[cell*rDim+1] = iPhi[1];
-    Phi[cell*rDim+2] = iPhi[2];
+      if(!(pFlags[cell] & FIXED_VELOCITY_X))
+        Phi[cell*rDim+0] = iPhi[0];
+      if(!(pFlags[cell] & FIXED_VELOCITY_Y))
+        Phi[cell*rDim+1] = iPhi[1];
+      if(!(pFlags[cell] & FIXED_VELOCITY_Z))
+        Phi[cell*rDim+2] = iPhi[2];
+    }
+
+    for(size_t d = 0; d < 3; d++) {
+      pFlags[cell] &= ~OUT_OF_BOUNDS;
+    }
   }
 };

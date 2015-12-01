@@ -4,8 +4,8 @@
 // Memory allocation & de-allocation
 #include <malloc.h>
 
-#include "defines.h"
-#include "hacks.h"
+#include "defines.hpp"
+#include "hacks.hpp"
 
 class MemManager {
 public:

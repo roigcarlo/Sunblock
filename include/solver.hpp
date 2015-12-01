@@ -3,11 +3,11 @@
 
 #include <sys/types.h>
 
-#include "defines.h"
-#include "utils.h"
-#include "block.h"
-#include "kernels.h"
-#include "interpolator.h"
+#include "defines.hpp"
+#include "utils.hpp"
+#include "block.hpp"
+#include "kernels.hpp"
+#include "interpolator.hpp"
 
 template<class Derived>
 class Solver {
@@ -60,7 +60,7 @@ public:
         size_t next = cell+(rZ+rBW)*(rY+rBW)*normal[2]+(rZ+rBW)*normal[1]+normal[0];
 
         for(size_t d = 0; d < dim; d++)
-          buff[next*dim+d] = 2 * buff[cell*dim+d] - buff[prev*dim+d];
+          buff[next*dim+d] = 2.0f * buff[cell*dim+d] - buff[prev*dim+d];
       }
     }
 
