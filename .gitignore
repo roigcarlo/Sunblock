@@ -27,6 +27,17 @@
 *.out
 *.app
 
-# Results
+# Results and data
 *.msh
 *.res
+*.post.*
+*.pcf
+*.prof
+*.prv
+*.row
+*.mdpa
+*.mpits
+
+# Extrae config
+extrae.xml
+extrae_raw.xml
