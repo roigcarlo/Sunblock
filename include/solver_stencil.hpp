@@ -21,9 +21,11 @@ private:
           size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(size_t i = rBWP; i < rX + rBWP; i++) {
             for (size_t d = 0; d < Dim; d++) {
-              gridC[cell*Dim+d] = (gridB[cell*Dim+d] - gridA[cell*Dim+d]) * rIdt;
-              cell++;
+              // if((gridA[cell*Dim+d] - gridB[cell*Dim+d]) != 0.0f && k == 17-3)
+              //   std::cout << gridA[cell*Dim+d] << " " << gridB[cell*Dim+d] << " " << gridA[cell*Dim+d] - gridB[cell*Dim+d] << std::endl;
+              gridC[cell*Dim+d] = (gridA[cell*Dim+d] - gridB[cell*Dim+d]) * rIdt;
             }
+            cell++;
           }
         }
       }
@@ -48,8 +50,8 @@ private:
           for(size_t i = rBWP; i < rX + rBWP; i++) {
             for (size_t d = 0; d < Dim; d++) {
 
-              gridB[cell*Dim+d] = 0;
-              stencilSize       = 0;
+              gridB[cell*Dim+d] = 0.0f;
+              stencilSize       = 0.0f;
 
               if(i != rBWP)          {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell - 1)*Dim+d];}
               if(i != rX + rBWP - 1) {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell + 1)*Dim+d];}
@@ -60,9 +62,9 @@ private:
 
               gridB[cell*Dim+d] -= (stencilSize * gridA[(cell)*Dim+d]);
               gridB[cell*Dim+d] *= (rIdx * rIdx);
-
-              cell++;
             }
+
+            cell++;
           }
         }
       }
@@ -75,6 +77,9 @@ private:
 
     PrecisionType pressGrad[3];
 
+    size_t offset[3] = {1,(rX+BW),(rY+BW)*(rX+BW)};
+    size_t limit[3]  = {rX,rY,rZ};
+
     // Apply the pressure gradient
     for(size_t kk = rBWP; kk < rZ + rBWP; kk+=mSs) {
       #pragma omp task \
@@ -85,21 +90,23 @@ private:
           size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(size_t i = rBWP; i < rX + rBWP; i++) {
 
-            if(i == rBWP)
+            size_t cellIndex[3] = {i,j,k};
 
-            pressGrad[0] = (
-              press[(cell + 1)] -
-              press[(cell - 1)]);
+            for(size_t d = 0; d < rDim; d++) {
+              if(cellIndex[d] == rBWP) {
+                pressGrad[d] = (
+                  press[(cell + offset[d])] -
+                  press[(cell           )]) * 2.0f;
+              } else if (cellIndex[d] == limit[d] + rBWP - 1) {
+                pressGrad[d] = (
+                  press[(cell            )] -
+                  press[(cell - offset[d])]) * 2.0f;
+              } else {
+                pressGrad[d] = (
+                  press[(cell + offset[d])] -
+                  press[(cell - offset[d])]);
+              }
 
-            pressGrad[1] = (
-              press[(cell + (rX+BW))] -
-              press[(cell - (rX+BW))]);
-
-            pressGrad[2] = (
-              press[(cell + (rY+BW)*(rX+BW))] -
-              press[(cell - (rY+BW)*(rX+BW))]);
-
-            for (size_t d = 0; d < rDim; d++) {
               gridB[cell*rDim+d] = pressGrad[d] * 0.5f * rIdx;
             }
 
@@ -114,6 +121,9 @@ private:
       PrecisionType * gridA,
       PrecisionType * gridB ) {
 
+    size_t offset[3] = {1,(rX+BW),(rY+BW)*(rX+BW)};
+    size_t limit[3]  = {rX,rY,rZ};
+
     // Combine it all together and store it back in A
     for(size_t kk = rBWP; kk < rZ + rBWP; kk+=mSs) {
       #pragma omp task \
@@ -123,15 +133,28 @@ private:
         for(size_t j = rBWP; j < rY + rBWP; j++) {
           size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
           for(size_t i = rBWP; i < rX + rBWP; i++) {
-            gridB[cell] =
-              (gridA[(cell + 1) * rDim + 0] -
-               gridA[(cell - 1) * rDim + 0]) +
-              (gridA[(cell + (rX+BW)) *rDim + 1] -
-               gridA[(cell - (rX+BW)) * rDim + 1]) +
-              (gridA[(cell + (rY+BW)*(rX+BW)) * rDim + 2] -
-               gridA[(cell - (rY+BW)*(rX+BW)) * rDim + 2]);
+            gridB[cell] = 0.0f;
+
+            size_t cellIndex[3] = {i,j,k};
+
+            for(size_t d = 0; d < rDim; d++) {
+              if(cellIndex[d] == rBWP) {
+                gridB[cell] += (
+                  gridA[(cell + offset[d]) * rDim + d] -
+                  gridA[(cell            ) * rDim + d]) * 2.0f;
+              } else if (cellIndex[d] == limit[d] + rBWP - 1) {
+                gridB[cell] += (
+                  gridA[(cell            ) * rDim + d] -
+                  gridA[(cell - offset[d]) * rDim + d]) * 2.0f;
+              } else {
+                gridB[cell] += (
+                  gridA[(cell + offset[d]) * rDim + d] -
+                  gridA[(cell - offset[d]) * rDim + d]);
+              }
+            }
 
             gridB[cell] = gridB[cell] * 0.5f * rIdx;
+            cell++;
           }
         }
       }
@@ -209,7 +232,45 @@ private:
         }
       }
     }
-}
+  }
+
+  inline void calculateSmooth(
+      PrecisionType * gridA,
+      PrecisionType * gridB,
+      const size_t &Dim) {
+
+    PrecisionType stencilSize = 0.0f;
+
+    for(size_t kk = rBWP; kk < rZ + rBWP; kk+=mSs) {
+      #pragma omp task \
+        depend(in: gridA[(kk)*mSlice3D:mSs*mSlice3D]) \
+        depend(out:gridB[(kk)*mSlice3D:mSs*mSlice3D]) \
+        shared(Dim)
+      for(size_t k = kk; k < kk+mSs; k++) {
+        for(size_t j = rBWP; j < rY + rBWP; j++) {
+          size_t cell = k*(rZ+rBW)*(rY+rBW)+j*(rY+BW)+rBWP;
+          for(size_t i = rBWP; i < rX + rBWP; i++) {
+            for (size_t d = 0; d < Dim; d++) {
+
+              gridB[cell*Dim+d] = 0.0f;
+              stencilSize       = 0.0f;
+
+              if(i != rBWP)          {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell - 1)*Dim+d];}
+              if(i != rX + rBWP - 1) {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell + 1)*Dim+d];}
+              if(j != rBWP)          {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell - (rX+BW))*Dim+d];}
+              if(j != rY + rBWP - 1) {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell + (rX+BW))*Dim+d];}
+              if(k != rBWP)          {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell - (rY+BW)*(rX+BW))*Dim+d];}
+              if(k != rZ + rBWP - 1) {stencilSize += 1.0f; gridB[cell*Dim+d] += gridA[(cell - (rY+BW)*(rX+BW))*Dim+d];}
+
+              gridB[cell*Dim+d] = (gridB[cell*Dim+d] + gridA[cell*Dim+d]) / (stencilSize+1.0f);
+            }
+
+            cell++;
+          }
+        }
+      }
+    }
+  }
 
 public:
 
@@ -459,7 +520,7 @@ public:
     #pragma omp single
     {
       #pragma omp taskwait
-      calculateAcceleration(initVel,vel,acc,3);
+      calculateAcceleration(vel,initVel,acc,3);
 
       #pragma omp taskwait
       calculateGradient(press,pressGrad);
@@ -468,7 +529,7 @@ public:
       calculateLapplacian(initVel,velLapp,3);
 
       #pragma omp taskwait
-      calculateVelocity(velLapp,pressGrad,force,acc,initVel);
+      calculateVelocity(velLapp,pressGrad,force,vel,initVel);
 
       #pragma omp taskwait
       calculateDivergence(initVel,velDiv);

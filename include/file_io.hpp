@@ -3,7 +3,8 @@
 #include <sstream>
 #include <fstream>
 
-#include "hacks.h"
+#include "defines.hpp"
+#include "hacks.hpp"
 
 // GiD IO
 #include "gidpost/source/gidpost.h"

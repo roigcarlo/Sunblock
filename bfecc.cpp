@@ -17,7 +17,7 @@
 #include "include/interpolator.hpp"
 
 #define WRITE_INIT_R(_STEP_)                                                        \
-io.WriteGidMeshWithSkinBin(dx,N,N,N);                                                       \
+io.WriteGidMeshBin(dx,N,N,N);                                                       \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_0],N,N,N,0,Dim,"AUX_3D_0");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_1],N,N,N,0,Dim,"AUX_3D_1");  \
 io.WriteGidResultsBin3D((PrecisionType*)buffers[AUX_3D_2],N,N,N,0,Dim,"velLappl");  \
@@ -124,6 +124,14 @@ int main(int argc, char *argv[]) {
       for(uint k = 0; k < N+BW; k++)
         flags[k*(N+BW)*(N+BW)+j*(N+BW)+i] = 0;
 
+  std::cout << "Falglist:" << std::endl;
+  std::cout << FIXED_VELOCITY_X << std::endl;
+  std::cout << FIXED_VELOCITY_Y << std::endl;
+  std::cout << FIXED_VELOCITY_Z << std::endl;
+  std::cout << FIXED_PRESSURE << std::endl;
+  std::cout << OUT_OF_BOUNDS << std::endl;
+
+
   for(uint a = BWP; a < N+BWP; a++) {
     for(uint b = BWP; b < N+BWP; b++) {
       flags[a*(N+BW)*(N+BW)+b*(N+BW)+1] |= FIXED_VELOCITY_X;
@@ -142,16 +150,16 @@ int main(int argc, char *argv[]) {
       flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Y;
       flags[a*(N+BW)*(N+BW)+N*(N+BW)+b] |= FIXED_VELOCITY_Z;
 
-      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
 
       // // flags[1*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
       // // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_PRESSURE;
 
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
-      // flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_X;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Y;
+      flags[N*(N+BW)*(N+BW)+a*(N+BW)+b] |= FIXED_VELOCITY_Z;
     }
   }
 

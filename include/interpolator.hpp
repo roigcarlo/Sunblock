@@ -55,20 +55,20 @@ public:
 
     PrecisionType Nx, Ny, Nz;
 
-    Nx = 1-(Coords[0] - pi);
-    Ny = 1-(Coords[1] - pj);
-    Nz = 1-(Coords[2] - pk);
+    Nx = 1.0f-(Coords[0] - (PrecisionType)pi);
+    Ny = 1.0f-(Coords[1] - (PrecisionType)pj);
+    Nz = 1.0f-(Coords[2] - (PrecisionType)pk);
 
     for(size_t d = 0; d < Dim; d++) {
       *(NewPhi+d) = (
-        OldPhi[IndexType::GetIndex(pi,pj,pk,PaddY,PaddZ)*Dim+d] * (    Nx) * (    Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(ni,pj,pk,PaddY,PaddZ)*Dim+d] * (1 - Nx) * (    Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(pi,nj,pk,PaddY,PaddZ)*Dim+d] * (    Nx) * (1 - Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(ni,nj,pk,PaddY,PaddZ)*Dim+d] * (1 - Nx) * (1 - Ny) * (    Nz) +
-        OldPhi[IndexType::GetIndex(pi,pj,nk,PaddY,PaddZ)*Dim+d] * (    Nx) * (    Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(ni,pj,nk,PaddY,PaddZ)*Dim+d] * (1 - Nx) * (    Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(pi,nj,nk,PaddY,PaddZ)*Dim+d] * (    Nx) * (1 - Ny) * (1 - Nz) +
-        OldPhi[IndexType::GetIndex(ni,nj,nk,PaddY,PaddZ)*Dim+d] * (1 - Nx) * (1 - Ny) * (1 - Nz)
+        OldPhi[IndexType::GetIndex(pi,pj,pk,PaddY,PaddZ)*Dim+d] * (       Nx) * (       Ny) * (       Nz) +
+        OldPhi[IndexType::GetIndex(ni,pj,pk,PaddY,PaddZ)*Dim+d] * (1.0f - Nx) * (       Ny) * (       Nz) +
+        OldPhi[IndexType::GetIndex(pi,nj,pk,PaddY,PaddZ)*Dim+d] * (       Nx) * (1.0f - Ny) * (       Nz) +
+        OldPhi[IndexType::GetIndex(ni,nj,pk,PaddY,PaddZ)*Dim+d] * (1.0f - Nx) * (1.0f - Ny) * (       Nz) +
+        OldPhi[IndexType::GetIndex(pi,pj,nk,PaddY,PaddZ)*Dim+d] * (       Nx) * (       Ny) * (1.0f - Nz) +
+        OldPhi[IndexType::GetIndex(ni,pj,nk,PaddY,PaddZ)*Dim+d] * (1.0f - Nx) * (       Ny) * (1.0f - Nz) +
+        OldPhi[IndexType::GetIndex(pi,nj,nk,PaddY,PaddZ)*Dim+d] * (       Nx) * (1.0f - Ny) * (1.0f - Nz) +
+        OldPhi[IndexType::GetIndex(ni,nj,nk,PaddY,PaddZ)*Dim+d] * (1.0f - Nx) * (1.0f - Ny) * (1.0f - Nz)
       );
     }
   }
